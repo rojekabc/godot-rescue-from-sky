@@ -1,0 +1,306 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=1]
+
+[sub_resource type="GDScript" id=1]
+
+resource_name = "World"
+script/source = "extends Node
+
+func _ready():
+	# Enable randomization
+	randomize()
+	# Hide template nodes
+	_templates_hide()
+	# Start timestamp calculation from beginig of play
+	$Timer.connect('timeout', self, \"_timeout\")
+	# Crate real map
+	_map_create()
+	pass
+
+func _timeout():
+	Game.timetick += 1
+
+# Hide template elements
+func _templates_hide():
+	for child in $Map/Templates.get_children():
+		child.visible = false
+	pass
+
+# Create map
+func _map_create():
+	for strType in Game.STRUCTURE.values():
+		var structure = _structure_create(strType)
+		$Map/Structures.add_child(structure)
+	_create_resource_network()
+
+# Create consumer-suplier network
+func _create_resource_network():
+	for structure in $Map/Structures.get_children():
+		for consume in structure.consumes:
+			var suppliers = _find_producers_of(consume)
+			if suppliers.empty():
+				continue
+			# TODO: Select nearest one. Now the first found
+			structure.consumes[consume].supplier = suppliers[0]
+			suppliers[0].register_consumer(consume, structure)
+
+func _find_producers_of(resource):
+	var result = []
+	for structure in $Map/Structures.get_children():
+		if structure.produces.has(resource):
+			result.append(structure)
+	return result
+
+func _structure_create(type):
+	var structure = $Map/Templates/Structure.duplicate()
+	var structureMargin = 30
+	structure.assign_type(type, $Timer)
+	structure.position.x = structureMargin + randi() % (Game.MAP_WIDTH - structureMargin*2)
+	structure.position.y = structureMargin + randi() % (Game.MAP_HEIGHT - structureMargin*2)
+	structure.visible = true
+	return structure
+	"
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="GDScript" id=2]
+
+resource_name = "Structure"
+script/source = "extends StaticBody2D
+
+# type of Game.STRUCTURE enum
+var type
+
+var consumes = {}
+var produces = {}
+
+# List resources, which are produced by structure
+func list_products():
+	pass
+
+# Register consumer, which will receive produced resource
+func register_consumer(resource, consumer):
+	if produces.has(resource):
+		var produce = produces[resource]
+		produce.consumers.append(consumer)
+	pass
+
+
+func assign_type(strType, timer):
+	var strDef = Game.structureDefinitions[strType]
+	type = strDef.type
+	$Acronym.text = strDef.acronym
+	timer.connect('timeout', self, '_timeout', [strDef.timerFunction])
+	for resource in strDef.consumes:
+		_consumed_resource_add(resource)
+	for resource in strDef.produces:
+		_produced_resource_add(resource)
+
+func get_type():
+	return type
+	
+func _ready():
+	pass
+
+# Put resource if wasn't before and there's free space.
+# True if successful put or False if no free space.
+func consumed_resource_put(resource):
+	var consumedResource = consumes[resource]
+	if consumedResource.has:
+		return false
+	else:
+		consumedResource.has = true
+		return true
+
+func _produced_resource_distribute(produce):
+	# TODO: Moving transport. Now it's quick move from point to point.
+	# TODO: Go to next consumer. Now it's to fully feed first one.
+	for consumer in produce.consumers:
+		if not consumer.consumed_resource_put(produce.resource):
+			continue
+		produce.has = false
+		Game.verbose(\"Structure \" + Game.structureDefinitions[type].name
+			+ \" send \" + Game.resourceDefinitions[produce.resource].name
+			+ \" to \" + Game.structureDefinitions[consumer.type].name)
+		break
+func _produced_resource_produce_tick(produce):
+	produce.timeout -= 1
+	if produce.timeout == 0:
+		produce.has = true
+		produce.producing = false
+		Game.verbose(\"Structure \" + Game.structureDefinitions[type].name
+			+ \" produced \" + Game.resourceDefinitions[produce.resource].name)
+	pass
+
+# check that has resources to start produce
+func _produced_resource_has_resources(produce):
+	var result = true
+	var resDef = Game.resourceDefinitions[produce.resource]
+	for consumedResource in resDef.consumes:
+		if not consumes[consumedResource].has:
+			result = false
+	return result
+
+func _produced_resource_start_production(produce):
+	# consume resources
+	var resDef = Game.resourceDefinitions[produce.resource]
+	for consumedResource in resDef.consumes:
+		consumes[consumedResource].has = false
+	# start produce
+	produce.producing = true
+	produce.timeout = resDef.timeout
+	Game.verbose(\"Structure \" + Game.structureDefinitions[type].name
+		 + \" start production of \" + Game.resourceDefinitions[produce.resource].name)
+
+func _produced_resource_timeout(produce):
+	if produce.has:
+		_produced_resource_distribute(produce)
+	elif produce.producing:
+		_produced_resource_produce_tick(produce)
+	elif _produced_resource_has_resources(produce):
+		_produced_resource_start_production(produce)
+	pass
+
+func _timeout(timerFunction):
+	for produce in produces.values(): _produced_resource_timeout(produce)
+	if has_method(timerFunction): call(timerFunction)
+	pass
+
+func _consumed_resource_add(resource):
+	consumes[resource] = {
+		resource = resource,
+		has = false,
+		supplier = null
+	}
+
+func _produced_resource_add(resource):
+	var resourceDefinition = Game.resourceDefinitions[resource]
+	produces[resource] = {
+		resource = resource,
+		producing = false,
+		has = false,
+		timeout = resourceDefinition.timeout,
+		consumers = [],
+		lastConsumer = null
+	}
+	"
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="RectangleShape2D" id=3]
+
+custom_solver_bias = 0.0
+extents = Vector2( 30, 30 )
+
+[sub_resource type="RectangleShape2D" id=4]
+
+custom_solver_bias = 0.0
+extents = Vector2( 25, 25 )
+
+[node name="World" type="Node" index="0"]
+
+script = SubResource( 1 )
+
+[node name="Map" type="Node" parent="." index="0"]
+
+[node name="Structures" type="Node" parent="Map" index="0"]
+
+[node name="Squads" type="Node" parent="Map" index="1"]
+
+[node name="Transports" type="Node" parent="Map" index="2"]
+
+[node name="Templates" type="Node" parent="Map" index="3"]
+
+[node name="Structure" type="StaticBody2D" parent="Map/Templates" index="0"]
+
+position = Vector2( 68.0187, 77.5413 )
+input_pickable = false
+collision_layer = 1
+collision_mask = 1
+constant_linear_velocity = Vector2( 0, 0 )
+constant_angular_velocity = 0.0
+friction = 1.0
+bounce = 0.0
+script = SubResource( 2 )
+_sections_unfolded = [ "Material", "Transform" ]
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="0"]
+
+shape = SubResource( 3 )
+_sections_unfolded = [ "Transform" ]
+
+[node name="Acronym" type="Label" parent="Map/Templates/Structure" index="1"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 29.0
+margin_bottom = 32.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 2
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 4
+custom_fonts/font = ExtResource( 1 )
+text = "C"
+percent_visible = 1.0
+lines_skipped = 0
+max_lines_visible = -1
+_sections_unfolded = [ "custom_fonts" ]
+
+[node name="Area2D" type="Area2D" parent="Map/Templates" index="1"]
+
+editor/display_folded = true
+position = Vector2( 199.009, 84.3346 )
+scale = Vector2( 0.502191, 0.489591 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+audio_bus_override = false
+audio_bus_name = "Master"
+_sections_unfolded = [ "Pause", "Transform" ]
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Area2D" index="0"]
+
+shape = SubResource( 4 )
+
+[node name="Acronym" type="Label" parent="Map/Templates/Area2D" index="1"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = -5.0
+margin_top = -15.0
+margin_right = 35.0
+margin_bottom = 17.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 2
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 4
+custom_fonts/font = ExtResource( 1 )
+text = "X"
+percent_visible = 1.0
+lines_skipped = 0
+max_lines_visible = -1
+_sections_unfolded = [ "custom_fonts" ]
+
+[node name="Timer" type="Timer" parent="." index="1"]
+
+process_mode = 1
+wait_time = 1.0
+one_shot = false
+autostart = true
+
+
