@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=11 format=2]
 
-[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=1]
+[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=2]
 
 [sub_resource type="GDScript" id=1]
 
@@ -29,36 +30,43 @@ func _templates_hide():
 
 # Create map
 func _map_create():
-	for strType in Game.STRUCTURE.values():
-		var structure = _structure_create(strType)
-		$Map/Structures.add_child(structure)
+	for ownerIdx in range(2):
+		for strType in Game.STRUCTURE.values():
+			var structure = _structure_create(ownerIdx, strType)
+			$Map/Structures.add_child(structure)
 	_create_resource_network()
 
 # Create consumer-suplier network
 func _create_resource_network():
 	for structure in $Map/Structures.get_children():
 		for consume in structure.consumes:
-			var suppliers = _find_producers_of(consume)
+			var suppliers = _find_producers_of(structure.ownerIdx, consume)
 			if suppliers.empty():
 				continue
 			# TODO: Select nearest one. Now the first found
 			structure.consumes[consume].supplier = suppliers[0]
 			suppliers[0].register_consumer(consume, structure)
 
-func _find_producers_of(resource):
+func _find_producers_of(ownerIdx, resource):
 	var result = []
 	for structure in $Map/Structures.get_children():
+		if structure.ownerIdx != ownerIdx:
+			continue
 		if structure.produces.has(resource):
 			result.append(structure)
 	return result
 
-func _structure_create(type):
+func _structure_create(ownerIdx, type):
 	var structure = $Map/Templates/Structure.duplicate()
 	var structureMargin = 30
 	structure.assign_type(type, $Timer)
-	structure.position.x = structureMargin + randi() % (Game.MAP_WIDTH - structureMargin*2)
+	structure.position.x = structureMargin + Game.MAP_WIDTH/2*ownerIdx + randi() % (Game.MAP_WIDTH/2 - structureMargin*2)
 	structure.position.y = structureMargin + randi() % (Game.MAP_HEIGHT - structureMargin*2)
 	structure.visible = true
+	structure.ownerIdx = ownerIdx
+	# TODO: Try to not duplicate. Create one material for one owner and second for other.
+	structure.get_node('Sprite').material = structure.get_node('Sprite').material.duplicate()
+	structure.get_node('Sprite').material.set('shader_param/color', Game.playerDefinitions[ownerIdx].color)
 	return structure
 	"
 _sections_unfolded = [ "Resource" ]
@@ -70,6 +78,7 @@ script/source = "extends StaticBody2D
 
 # type of Game.STRUCTURE enum
 var type
+var ownerIdx
 
 var consumes = {}
 var produces = {}
@@ -119,16 +128,21 @@ func _produced_resource_distribute(produce):
 		if not consumer.consumed_resource_put(produce.resource):
 			continue
 		produce.has = false
-		Game.verbose(\"Structure \" + Game.structureDefinitions[type].name
+		Game.verbose(
+			\"Structure \" + Game.playerDefinitions[ownerIdx].name
+			+ \".\" + Game.structureDefinitions[type].name
 			+ \" send \" + Game.resourceDefinitions[produce.resource].name
-			+ \" to \" + Game.structureDefinitions[consumer.type].name)
+			+ \" to \" + Game.playerDefinitions[consumer.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[consumer.type].name)
 		break
 func _produced_resource_produce_tick(produce):
 	produce.timeout -= 1
 	if produce.timeout == 0:
 		produce.has = true
 		produce.producing = false
-		Game.verbose(\"Structure \" + Game.structureDefinitions[type].name
+		Game.verbose(
+			\"Structure \" + Game.playerDefinitions[ownerIdx].name
+			+ \".\" + Game.structureDefinitions[type].name
 			+ \" produced \" + Game.resourceDefinitions[produce.resource].name)
 	pass
 
@@ -149,7 +163,9 @@ func _produced_resource_start_production(produce):
 	# start produce
 	produce.producing = true
 	produce.timeout = resDef.timeout
-	Game.verbose(\"Structure \" + Game.structureDefinitions[type].name
+	Game.verbose(
+		\"Structure \" + Game.playerDefinitions[ownerIdx].name
+		+ \".\" + Game.structureDefinitions[type].name
 		 + \" start production of \" + Game.resourceDefinitions[produce.resource].name)
 
 func _produced_resource_timeout(produce):
@@ -186,10 +202,39 @@ func _produced_resource_add(resource):
 	"
 _sections_unfolded = [ "Resource" ]
 
+[sub_resource type="ShaderMaterial" id=7]
+
+render_priority = 0
+shader = ExtResource( 1 )
+shader_param/color = null
+
+[sub_resource type="ImageTexture" id=5]
+
+flags = 0
+storage = 0
+lossy_quality = 0.7
+flags = 0
+size = Vector2( 60, 60 )
+
 [sub_resource type="RectangleShape2D" id=3]
 
 custom_solver_bias = 0.0
 extents = Vector2( 30, 30 )
+
+[sub_resource type="ShaderMaterial" id=8]
+
+render_priority = 0
+shader = ExtResource( 1 )
+shader_param/color = null
+_sections_unfolded = [ "shader_param" ]
+
+[sub_resource type="ImageTexture" id=6]
+
+flags = 0
+storage = 0
+lossy_quality = 0.7
+flags = 0
+size = Vector2( 50, 50 )
 
 [sub_resource type="RectangleShape2D" id=4]
 
@@ -226,12 +271,18 @@ __meta__ = {
 "_edit_group_": true
 }
 
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="0"]
+[node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
+
+material = SubResource( 7 )
+texture = SubResource( 5 )
+_sections_unfolded = [ "Material", "Region", "Transform" ]
+
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
 
 shape = SubResource( 3 )
 _sections_unfolded = [ "Transform" ]
 
-[node name="Acronym" type="Label" parent="Map/Templates/Structure" index="1"]
+[node name="Acronym" type="Label" parent="Map/Templates/Structure" index="2"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -245,7 +296,7 @@ mouse_filter = 2
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 4
-custom_fonts/font = ExtResource( 1 )
+custom_fonts/font = ExtResource( 2 )
 text = "C"
 percent_visible = 1.0
 lines_skipped = 0
@@ -254,7 +305,6 @@ _sections_unfolded = [ "custom_fonts" ]
 
 [node name="Area2D" type="Area2D" parent="Map/Templates" index="1"]
 
-editor/display_folded = true
 position = Vector2( 199.009, 84.3346 )
 scale = Vector2( 0.502191, 0.489591 )
 input_pickable = true
@@ -264,16 +314,22 @@ linear_damp = 0.1
 angular_damp = 1.0
 audio_bus_override = false
 audio_bus_name = "Master"
-_sections_unfolded = [ "Pause", "Transform" ]
+_sections_unfolded = [ "Material", "Pause", "Transform" ]
 __meta__ = {
 "_edit_group_": true
 }
 
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Area2D" index="0"]
+[node name="Sprite" type="Sprite" parent="Map/Templates/Area2D" index="0"]
+
+material = SubResource( 8 )
+texture = SubResource( 6 )
+_sections_unfolded = [ "Material" ]
+
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Area2D" index="1"]
 
 shape = SubResource( 4 )
 
-[node name="Acronym" type="Label" parent="Map/Templates/Area2D" index="1"]
+[node name="Acronym" type="Label" parent="Map/Templates/Area2D" index="2"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -289,7 +345,7 @@ mouse_filter = 2
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 4
-custom_fonts/font = ExtResource( 1 )
+custom_fonts/font = ExtResource( 2 )
 text = "X"
 percent_visible = 1.0
 lines_skipped = 0

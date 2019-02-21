@@ -11,6 +11,7 @@ const CONFIGURATION = {
 
 const resourceDefinitions = {}
 const structureDefinitions = {}
+const playerDefinitions = []
 
 const MAP_WIDTH = 1024
 const MAP_HEIGHT = 600
@@ -89,5 +90,13 @@ func _ready():
 		consumes = [MANPOWER],
 		timeout = 20
 	}
+	playerDefinitions.append({
+			name = 'Zygfryd',
+			color = Color(0.2, 0.0, 0.6, 0.5)
+	})
+	playerDefinitions.append({
+			name = 'Godfryd',
+			color = Color(0.6, 0.0, 0.2, 0.5)
+	})
 
 	pass
