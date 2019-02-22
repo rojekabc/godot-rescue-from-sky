@@ -15,12 +15,19 @@ func _ready():
 	_templates_hide()
 	# Start timestamp calculation from beginig of play
 	$Timer.connect('timeout', self, \"_timeout\")
+	# Prepare materials
+	_prepare_materials()
 	# Crate real map
 	_map_create()
 	# Start all transport moves with monitoring them
 	$Map/Transports/Tween.start()
 	$Map/Transports/Tween.connect('tween_completed', self, '_transport_tween_completed')
 	pass
+
+func _prepare_materials():
+	for playerDefinition in Game.playerDefinitions:
+		playerDefinition.structureMaterial = $Map/Templates/Structure/Sprite.material.duplicate()
+		playerDefinition.structureMaterial.set('shader_param/color', playerDefinition.color)
 
 func _timeout():
 	Game.timetick += 1
@@ -101,8 +108,9 @@ func _structure_create(ownerIdx, type):
 	structure.position.y = structureMargin + randi() % (Game.MAP_HEIGHT - structureMargin*2)
 	structure.visible = true
 	structure.ownerIdx = ownerIdx
-	structure.get_node('Sprite').material = structure.get_node('Sprite').material.duplicate()
-	structure.get_node('Sprite').material.set('shader_param/color', Game.playerDefinitions[ownerIdx].color)
+	structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
+	# structure.get_node('Sprite').material.duplicate()
+	# structure.get_node('Sprite').material.set('shader_param/color', Game.playerDefinitions[ownerIdx].color)
 	return structure
 	"
 _sections_unfolded = [ "Resource" ]
