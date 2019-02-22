@@ -43,9 +43,9 @@ func _create_resource_network():
 			var suppliers = _find_producers_of(structure.ownerIdx, consume)
 			if suppliers.empty():
 				continue
-			# TODO: Select nearest one. Now the first found
-			structure.consumes[consume].supplier = suppliers[0]
-			suppliers[0].register_consumer(consume, structure)
+			var supplierIdx = 0
+			structure.consumes[consume].supplier = suppliers[supplierIdx]
+			suppliers[supplierIdx].register_consumer(consume, structure)
 
 func _find_producers_of(ownerIdx, resource):
 	var result = []
@@ -64,7 +64,6 @@ func _structure_create(ownerIdx, type):
 	structure.position.y = structureMargin + randi() % (Game.MAP_HEIGHT - structureMargin*2)
 	structure.visible = true
 	structure.ownerIdx = ownerIdx
-	# TODO: Try to not duplicate. Create one material for one owner and second for other.
 	structure.get_node('Sprite').material = structure.get_node('Sprite').material.duplicate()
 	structure.get_node('Sprite').material.set('shader_param/color', Game.playerDefinitions[ownerIdx].color)
 	return structure
@@ -122,8 +121,6 @@ func consumed_resource_put(resource):
 		return true
 
 func _produced_resource_distribute(produce):
-	# TODO: Moving transport. Now it's quick move from point to point.
-	# TODO: Go to next consumer. Now it's to fully feed first one.
 	for consumer in produce.consumers:
 		if not consumer.consumed_resource_put(produce.resource):
 			continue
@@ -199,16 +196,16 @@ func _produced_resource_add(resource):
 		consumers = [],
 		lastConsumer = null
 	}
-	"
+"
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="ShaderMaterial" id=7]
+[sub_resource type="ShaderMaterial" id=3]
 
 render_priority = 0
 shader = ExtResource( 1 )
 shader_param/color = null
 
-[sub_resource type="ImageTexture" id=5]
+[sub_resource type="ImageTexture" id=4]
 
 flags = 0
 storage = 0
@@ -216,19 +213,19 @@ lossy_quality = 0.7
 flags = 0
 size = Vector2( 60, 60 )
 
-[sub_resource type="RectangleShape2D" id=3]
+[sub_resource type="RectangleShape2D" id=5]
 
 custom_solver_bias = 0.0
 extents = Vector2( 30, 30 )
 
-[sub_resource type="ShaderMaterial" id=8]
+[sub_resource type="ShaderMaterial" id=6]
 
 render_priority = 0
 shader = ExtResource( 1 )
 shader_param/color = null
 _sections_unfolded = [ "shader_param" ]
 
-[sub_resource type="ImageTexture" id=6]
+[sub_resource type="ImageTexture" id=7]
 
 flags = 0
 storage = 0
@@ -236,7 +233,7 @@ lossy_quality = 0.7
 flags = 0
 size = Vector2( 50, 50 )
 
-[sub_resource type="RectangleShape2D" id=4]
+[sub_resource type="RectangleShape2D" id=8]
 
 custom_solver_bias = 0.0
 extents = Vector2( 25, 25 )
@@ -273,13 +270,13 @@ __meta__ = {
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
 
-material = SubResource( 7 )
-texture = SubResource( 5 )
+material = SubResource( 3 )
+texture = SubResource( 4 )
 _sections_unfolded = [ "Material", "Region", "Transform" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
 
-shape = SubResource( 3 )
+shape = SubResource( 5 )
 _sections_unfolded = [ "Transform" ]
 
 [node name="Acronym" type="Label" parent="Map/Templates/Structure" index="2"]
@@ -321,13 +318,13 @@ __meta__ = {
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Area2D" index="0"]
 
-material = SubResource( 8 )
-texture = SubResource( 6 )
+material = SubResource( 6 )
+texture = SubResource( 7 )
 _sections_unfolded = [ "Material" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Area2D" index="1"]
 
-shape = SubResource( 4 )
+shape = SubResource( 8 )
 
 [node name="Acronym" type="Label" parent="Map/Templates/Area2D" index="2"]
 
