@@ -44,11 +44,24 @@ func _create_resource_network():
 	for structure in $Map/Structures.get_children():
 		for consume in structure.consumes:
 			var suppliers = _find_producers_of(structure.ownerIdx, consume)
-			if suppliers.empty():
-				continue
-			var supplierIdx = 0
-			structure.consumes[consume].supplier = suppliers[supplierIdx]
-			suppliers[supplierIdx].register_consumer(consume, structure)
+			var supplier = _find_best_supplier(structure, suppliers)
+			if supplier:
+				structure.consumes[consume].supplier = supplier
+				supplier.register_consumer(consume, structure)
+
+func _find_best_supplier(structure, suppliers):
+	if (suppliers == null) or suppliers.empty():
+		return null
+	var bestSuplierDistance = 1000000
+	var bestSupplierIdx = -1
+	var suplierIdx = 0
+	for suplier in suppliers:
+		var distance = (structure.position - suplier.position).length()
+		if distance < bestSuplierDistance:
+			bestSuplierDistance = distance
+			bestSupplierIdx = suplierIdx
+		suplierIdx += 1
+	return suppliers[bestSupplierIdx]
 
 func _find_producers_of(ownerIdx, resource):
 	var result = []
@@ -61,6 +74,9 @@ func _find_producers_of(ownerIdx, resource):
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
+	if sourceStructure == targetStructure:
+		transport.complete()
+		return
 	transport.position = sourceStructure.position
 	transport.visible = true
 	$Map/Transports.add_child(transport)
@@ -144,15 +160,15 @@ func _produced_resource_distribute(produce):
 	for consumer in produce.consumers:
 		if not consumer.consumed_resource_may_send(produce.resource):
 			continue
-		var transport = Game.getWorld().transport_start(self, consumer, produce.resource)
-		produce.has = false
-		consumer.consumed_resource_wait(produce.resource)
 		Game.verbose(
 			\"Structure \" + Game.playerDefinitions[ownerIdx].name
 			+ \".\" + Game.structureDefinitions[type].name
 			+ \" send \" + Game.resourceDefinitions[produce.resource].name
 			+ \" to \" + Game.playerDefinitions[consumer.ownerIdx].name
 			+ \".\" + Game.structureDefinitions[consumer.type].name)
+		var transport = Game.getWorld().transport_start(self, consumer, produce.resource)
+		produce.has = false
+		consumer.consumed_resource_wait(produce.resource)
 		break
 
 func _produced_resource_produce_tick(produce):
@@ -244,7 +260,7 @@ size = Vector2( 60, 60 )
 custom_solver_bias = 0.0
 extents = Vector2( 30, 30 )
 
-[sub_resource type="GDScript" id=9]
+[sub_resource type="GDScript" id=6]
 
 resource_name = "Transport"
 script/source = "extends Area2D
@@ -276,14 +292,14 @@ func complete():
 "
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="ShaderMaterial" id=6]
+[sub_resource type="ShaderMaterial" id=7]
 
 render_priority = 0
 shader = ExtResource( 1 )
 shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
 _sections_unfolded = [ "shader_param" ]
 
-[sub_resource type="ImageTexture" id=7]
+[sub_resource type="ImageTexture" id=8]
 
 flags = 0
 storage = 0
@@ -291,7 +307,7 @@ lossy_quality = 0.7
 flags = 0
 size = Vector2( 30, 30 )
 
-[sub_resource type="RectangleShape2D" id=8]
+[sub_resource type="RectangleShape2D" id=9]
 
 custom_solver_bias = 0.0
 extents = Vector2( 15, 15 )
@@ -379,7 +395,7 @@ linear_damp = 0.1
 angular_damp = 1.0
 audio_bus_override = false
 audio_bus_name = "Master"
-script = SubResource( 9 )
+script = SubResource( 6 )
 _sections_unfolded = [ "Material", "Pause", "Transform" ]
 __meta__ = {
 "_edit_group_": true
@@ -387,13 +403,13 @@ __meta__ = {
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
 
-material = SubResource( 6 )
-texture = SubResource( 7 )
+material = SubResource( 7 )
+texture = SubResource( 8 )
 _sections_unfolded = [ "Material" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
 
-shape = SubResource( 8 )
+shape = SubResource( 9 )
 
 [node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
 
