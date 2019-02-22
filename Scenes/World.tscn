@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=2]
+[gd_scene load_steps=12 format=2]
 
 [ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
 [ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=2]
@@ -56,6 +56,16 @@ func _find_producers_of(ownerIdx, resource):
 			result.append(structure)
 	return result
 
+func transport_start(sourceStructure, targetStructure, transportedResource):
+	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
+	transport.visible = true
+	$Map/Transports.add_child(transport)
+
+func _transport_create(sourceStructure, targetStructure, transportedResource):
+	var transport = $Map/Templates/Trasnport.duplicate()
+	transport.setup(sourceStructure, targetStructure, transportedResource)
+	return transport
+
 func _structure_create(ownerIdx, type):
 	var structure = $Map/Templates/Structure.duplicate()
 	var structureMargin = 30
@@ -81,10 +91,6 @@ var ownerIdx
 
 var consumes = {}
 var produces = {}
-
-# List resources, which are produced by structure
-func list_products():
-	pass
 
 # Register consumer, which will receive produced resource
 func register_consumer(resource, consumer):
@@ -124,6 +130,7 @@ func _produced_resource_distribute(produce):
 	for consumer in produce.consumers:
 		if not consumer.consumed_resource_put(produce.resource):
 			continue
+		var transport = Game.getWorld().transport_start(self, consumer, produce.resource)
 		produce.has = false
 		Game.verbose(
 			\"Structure \" + Game.playerDefinitions[ownerIdx].name
@@ -132,6 +139,7 @@ func _produced_resource_distribute(produce):
 			+ \" to \" + Game.playerDefinitions[consumer.ownerIdx].name
 			+ \".\" + Game.structureDefinitions[consumer.type].name)
 		break
+
 func _produced_resource_produce_tick(produce):
 	produce.timeout -= 1
 	if produce.timeout == 0:
@@ -218,11 +226,37 @@ size = Vector2( 60, 60 )
 custom_solver_bias = 0.0
 extents = Vector2( 30, 30 )
 
+[sub_resource type="GDScript" id=9]
+
+resource_name = "Transport"
+script/source = "extends Area2D
+
+var source
+var target
+var resource
+
+func setup(sourceStructure, targetStructure, transportedResource):
+	source = sourceStructure
+	target = targetStructure
+	resource = transportedResource
+	$Acronym.text = Game.resourceDefinitions[resource].acronym
+	pass
+
+func _ready():
+	if not source or not target:
+		return
+	var distance = (target.position - source.position).length()
+	$Tween.interpolate_property(self, \"position\", source.position, target.position, distance/Game.CONFIGURATION.transportSpeed, Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+	$Tween.start()
+	pass
+"
+_sections_unfolded = [ "Resource" ]
+
 [sub_resource type="ShaderMaterial" id=6]
 
 render_priority = 0
 shader = ExtResource( 1 )
-shader_param/color = null
+shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
 _sections_unfolded = [ "shader_param" ]
 
 [sub_resource type="ImageTexture" id=7]
@@ -254,6 +288,7 @@ script = SubResource( 1 )
 
 [node name="Structure" type="StaticBody2D" parent="Map/Templates" index="0"]
 
+editor/display_folded = true
 position = Vector2( 68.0187, 77.5413 )
 input_pickable = false
 collision_layer = 1
@@ -276,6 +311,7 @@ _sections_unfolded = [ "Material", "Region", "Transform" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
 
+visible = false
 shape = SubResource( 5 )
 _sections_unfolded = [ "Transform" ]
 
@@ -300,7 +336,7 @@ lines_skipped = 0
 max_lines_visible = -1
 _sections_unfolded = [ "custom_fonts" ]
 
-[node name="Area2D" type="Area2D" parent="Map/Templates" index="1"]
+[node name="Trasnport" type="Area2D" parent="Map/Templates" index="1"]
 
 position = Vector2( 199.009, 84.3346 )
 scale = Vector2( 0.502191, 0.489591 )
@@ -311,22 +347,24 @@ linear_damp = 0.1
 angular_damp = 1.0
 audio_bus_override = false
 audio_bus_name = "Master"
+script = SubResource( 9 )
 _sections_unfolded = [ "Material", "Pause", "Transform" ]
 __meta__ = {
 "_edit_group_": true
 }
 
-[node name="Sprite" type="Sprite" parent="Map/Templates/Area2D" index="0"]
+[node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
 
 material = SubResource( 6 )
 texture = SubResource( 7 )
 _sections_unfolded = [ "Material" ]
 
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Area2D" index="1"]
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
 
+visible = false
 shape = SubResource( 8 )
 
-[node name="Acronym" type="Label" parent="Map/Templates/Area2D" index="2"]
+[node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -348,6 +386,15 @@ percent_visible = 1.0
 lines_skipped = 0
 max_lines_visible = -1
 _sections_unfolded = [ "custom_fonts" ]
+
+[node name="Tween" type="Tween" parent="Map/Templates/Trasnport" index="3"]
+
+repeat = false
+playback_process_mode = 1
+playback_speed = 1.0
+playback/active = false
+playback/repeat = false
+playback/speed = 1.0
 
 [node name="Timer" type="Timer" parent="." index="1"]
 

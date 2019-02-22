@@ -6,7 +6,8 @@ enum RESOURCE {MANPOWER, FOOD, ARMY, AIRPLANE}
 var timetick = 0
 
 const CONFIGURATION = {
-		verbose = true
+		verbose = true,
+		transportSpeed = 10 # number of units (unit is a distance between structures) per second
 	}
 
 const resourceDefinitions = {}
@@ -19,6 +20,9 @@ const MAP_HEIGHT = 600
 func verbose(msg):
 	if CONFIGURATION.verbose:
 		print(str(timetick) + ' : ' + msg)
+
+func getWorld():
+	return get_tree().get_root().get_child(1) # .get_node('World')
 
 func _ready():
 	structureDefinitions[CITY] = {
@@ -73,22 +77,26 @@ func _ready():
 	resourceDefinitions[MANPOWER] = {
 		name = 'Manpower',
 		consumes = [FOOD],
-		timeout = 5
+		timeout = 5,
+		acronym = 'Mp'
 	}
 	resourceDefinitions[FOOD] = {
 		name = 'Food',
 		consumes = [],
-		timeout = 1
+		timeout = 1,
+		acronym = 'F'
 	}
 	resourceDefinitions[ARMY] = {
 		name = 'Army',
 		consumes = [MANPOWER, FOOD],
-		timeout = 10
+		timeout = 10,
+		acronym = 'A'
 	}
 	resourceDefinitions[AIRPLANE] = {
 		name = 'Airplane',
 		consumes = [MANPOWER],
-		timeout = 20
+		timeout = 20,
+		acronym = 'Ap'
 	}
 	playerDefinitions.append({
 			name = 'Zygfryd',
