@@ -17,6 +17,9 @@ func _ready():
 	$Timer.connect('timeout', self, \"_timeout\")
 	# Crate real map
 	_map_create()
+	# Start all transport moves with monitoring them
+	$Map/Transports/Tween.start()
+	$Map/Transports/Tween.connect('tween_completed', self, '_transport_tween_completed')
 	pass
 
 func _timeout():
@@ -58,8 +61,16 @@ func _find_producers_of(ownerIdx, resource):
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
+	transport.position = sourceStructure.position
 	transport.visible = true
 	$Map/Transports.add_child(transport)
+	var distance = (targetStructure.position - sourceStructure.position).length()
+	$Map/Transports/Tween.interpolate_property(transport, \"position\", sourceStructure.position, targetStructure.position, distance/Game.CONFIGURATION.transportSpeed, Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+
+# Call by tween signal
+func _transport_tween_completed(transport, key):
+	transport.complete()
+	pass
 
 func _transport_create(sourceStructure, targetStructure, transportedResource):
 	var transport = $Map/Templates/Trasnport.duplicate()
@@ -116,22 +127,26 @@ func get_type():
 func _ready():
 	pass
 
-# Put resource if wasn't before and there's free space.
-# True if successful put or False if no free space.
 func consumed_resource_put(resource):
 	var consumedResource = consumes[resource]
-	if consumedResource.has:
-		return false
-	else:
-		consumedResource.has = true
-		return true
+	consumedResource.has = true
+	consumedResource.wait = false
+
+func consumed_resource_wait(resource):
+	var consumedResource = consumes[resource]
+	consumedResource.wait = true
+
+func consumed_resource_may_send(resource):
+	var consumedResource = consumes[resource]
+	return not (consumedResource.has or consumedResource.wait)
 
 func _produced_resource_distribute(produce):
 	for consumer in produce.consumers:
-		if not consumer.consumed_resource_put(produce.resource):
+		if not consumer.consumed_resource_may_send(produce.resource):
 			continue
 		var transport = Game.getWorld().transport_start(self, consumer, produce.resource)
 		produce.has = false
+		consumer.consumed_resource_wait(produce.resource)
 		Game.verbose(
 			\"Structure \" + Game.playerDefinitions[ownerIdx].name
 			+ \".\" + Game.structureDefinitions[type].name
@@ -191,7 +206,9 @@ func _consumed_resource_add(resource):
 	consumes[resource] = {
 		resource = resource,
 		has = false,
-		supplier = null
+		supplier = null,
+		# transport start, waiting for resource
+		wait = false
 	}
 
 func _produced_resource_add(resource):
@@ -211,7 +228,8 @@ _sections_unfolded = [ "Resource" ]
 
 render_priority = 0
 shader = ExtResource( 1 )
-shader_param/color = null
+shader_param/color = Plane( 0, 0, 0, 1 )
+_sections_unfolded = [ "shader_param" ]
 
 [sub_resource type="ImageTexture" id=4]
 
@@ -243,11 +261,17 @@ func setup(sourceStructure, targetStructure, transportedResource):
 	pass
 
 func _ready():
-	if not source or not target:
-		return
-	var distance = (target.position - source.position).length()
-	$Tween.interpolate_property(self, \"position\", source.position, target.position, distance/Game.CONFIGURATION.transportSpeed, Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
-	$Tween.start()
+	pass
+
+func complete():
+	target.consumed_resource_put(resource)
+	Game.verbose(\"Transport completed from \"
+			+ Game.playerDefinitions[source.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[source.type].name
+			+ \" send \" + Game.resourceDefinitions[resource].name
+			+ \" to \" + Game.playerDefinitions[target.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[target.type].name)
+	queue_free()
 	pass
 "
 _sections_unfolded = [ "Resource" ]
@@ -265,12 +289,12 @@ flags = 0
 storage = 0
 lossy_quality = 0.7
 flags = 0
-size = Vector2( 50, 50 )
+size = Vector2( 30, 30 )
 
 [sub_resource type="RectangleShape2D" id=8]
 
 custom_solver_bias = 0.0
-extents = Vector2( 25, 25 )
+extents = Vector2( 15, 15 )
 
 [node name="World" type="Node" index="0"]
 
@@ -284,11 +308,20 @@ script = SubResource( 1 )
 
 [node name="Transports" type="Node" parent="Map" index="2"]
 
+[node name="Tween" type="Tween" parent="Map/Transports" index="0"]
+
+repeat = false
+playback_process_mode = 1
+playback_speed = 1.0
+playback/active = false
+playback/repeat = false
+playback/speed = 1.0
+_sections_unfolded = [ "playback" ]
+
 [node name="Templates" type="Node" parent="Map" index="3"]
 
 [node name="Structure" type="StaticBody2D" parent="Map/Templates" index="0"]
 
-editor/display_folded = true
 position = Vector2( 68.0187, 77.5413 )
 input_pickable = false
 collision_layer = 1
@@ -339,7 +372,6 @@ _sections_unfolded = [ "custom_fonts" ]
 [node name="Trasnport" type="Area2D" parent="Map/Templates" index="1"]
 
 position = Vector2( 199.009, 84.3346 )
-scale = Vector2( 0.502191, 0.489591 )
 input_pickable = true
 gravity_vec = Vector2( 0, 1 )
 gravity = 98.0
@@ -361,7 +393,6 @@ _sections_unfolded = [ "Material" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
 
-visible = false
 shape = SubResource( 8 )
 
 [node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
@@ -370,10 +401,10 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_left = -5.0
-margin_top = -15.0
-margin_right = 35.0
-margin_bottom = 17.0
+margin_left = -15.0
+margin_top = -14.0
+margin_right = 16.0
+margin_bottom = 18.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
 mouse_filter = 2
@@ -382,19 +413,11 @@ size_flags_horizontal = 1
 size_flags_vertical = 4
 custom_fonts/font = ExtResource( 2 )
 text = "X"
+align = 1
 percent_visible = 1.0
 lines_skipped = 0
 max_lines_visible = -1
 _sections_unfolded = [ "custom_fonts" ]
-
-[node name="Tween" type="Tween" parent="Map/Templates/Trasnport" index="3"]
-
-repeat = false
-playback_process_mode = 1
-playback_speed = 1.0
-playback/active = false
-playback/repeat = false
-playback/speed = 1.0
 
 [node name="Timer" type="Timer" parent="." index="1"]
 

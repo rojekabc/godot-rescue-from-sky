@@ -7,7 +7,7 @@ var timetick = 0
 
 const CONFIGURATION = {
 		verbose = true,
-		transportSpeed = 10 # number of units (unit is a distance between structures) per second
+		transportSpeed = 20 # number of units (unit is a distance between structures) per second
 	}
 
 const resourceDefinitions = {}
