@@ -22,7 +22,33 @@ func _ready():
 	# Start all transport moves with monitoring them
 	$Map/Transports/Tween.start()
 	$Map/Transports/Tween.connect('tween_completed', self, '_transport_tween_completed')
+	set_process_input( true )
 	pass
+
+func _input(event):
+	if event is InputEventMouseButton and event.is_pressed() and event.button_index == BUTTON_LEFT:
+		var strPressed = _find_structure_at(event.global_position)
+		if strPressed:
+			print('Pressed ' + Game.structureDefinitions[strPressed.type].name)
+	pass
+
+const STRUCTURE_SIZE = 60
+func _find_structure_at(global_position):
+	for structure in $Map/Structures.get_children():
+		var rect = Rect2(
+			structure.global_position.x-structure.HALF_SIZE, structure.global_position.y-STRUCTURE_SIZE/2,
+			STRUCTURE_SIZE, STRUCTURE_SIZE)
+		if rect.has_point(global_position):
+			return structure;
+	return null
+
+func _find_structures_at(global_positions):
+	var result = []
+	for pos in global_positions:
+		var structure = _find_structure_at(pos)
+		if structure:
+			result.append(structure)
+	return result
 
 func _prepare_materials():
 	for playerDefinition in Game.playerDefinitions:
@@ -39,10 +65,14 @@ func _templates_hide():
 	pass
 
 # Create map
+# Don't allow to cross other structure on the map
 func _map_create():
 	for ownerIdx in range(2):
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
+			while not _find_structures_at(structure.get_corners()).empty():
+				Game.verbose('Fix structure collision')
+				structure.random_position(ownerIdx)
 			$Map/Structures.add_child(structure)
 	_create_resource_network()
 
@@ -102,15 +132,11 @@ func _transport_create(sourceStructure, targetStructure, transportedResource):
 
 func _structure_create(ownerIdx, type):
 	var structure = $Map/Templates/Structure.duplicate()
-	var structureMargin = 30
 	structure.assign_type(type, $Timer)
-	structure.position.x = structureMargin + Game.MAP_WIDTH/2*ownerIdx + randi() % (Game.MAP_WIDTH/2 - structureMargin*2)
-	structure.position.y = structureMargin + randi() % (Game.MAP_HEIGHT - structureMargin*2)
 	structure.visible = true
 	structure.ownerIdx = ownerIdx
+	structure.random_position(ownerIdx)
 	structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
-	# structure.get_node('Sprite').material.duplicate()
-	# structure.get_node('Sprite').material.set('shader_param/color', Game.playerDefinitions[ownerIdx].color)
 	return structure
 	"
 _sections_unfolded = [ "Resource" ]
@@ -120,12 +146,18 @@ _sections_unfolded = [ "Resource" ]
 resource_name = "Structure"
 script/source = "extends StaticBody2D
 
+const HALF_SIZE = 30
+const FULL_SIZE = 60
+
 # type of Game.STRUCTURE enum
 var type
 var ownerIdx
 
 var consumes = {}
 var produces = {}
+
+# structure specific data
+var data = {}
 
 # Register consumer, which will receive produced resource
 func register_consumer(resource, consumer):
@@ -134,22 +166,37 @@ func register_consumer(resource, consumer):
 		produce.consumers.append(consumer)
 	pass
 
+func random_position(ownerIdx):
+	position.x = HALF_SIZE + Game.MAP_WIDTH/2*ownerIdx + randi() % (Game.MAP_WIDTH/2 - FULL_SIZE)
+	position.y = HALF_SIZE + randi() % (Game.MAP_HEIGHT - FULL_SIZE)
+	pass
 
 func assign_type(strType, timer):
 	var strDef = Game.structureDefinitions[strType]
 	type = strDef.type
 	$Acronym.text = strDef.acronym
-	timer.connect('timeout', self, '_timeout', [strDef.timerFunction])
+	timer.connect('timeout', self, '_timeout')
 	for resource in strDef.consumes:
 		_consumed_resource_add(resource)
 	for resource in strDef.produces:
 		_produced_resource_add(resource)
+	var strName = Game.structureDefinitions[strType].name
+	var callName = '_' + strName + '_create_data'
+	if has_method(callName): call(callName)
 
 func get_type():
 	return type
 	
 func _ready():
 	pass
+
+func get_corners():
+	var result = []
+	result.append(Vector2(global_position.x-HALF_SIZE, global_position.y-HALF_SIZE))
+	result.append(Vector2(global_position.x-HALF_SIZE, global_position.y+HALF_SIZE))
+	result.append(Vector2(global_position.x+HALF_SIZE, global_position.y-HALF_SIZE))
+	result.append(Vector2(global_position.x+HALF_SIZE, global_position.y+HALF_SIZE))
+	return result
 
 func consumed_resource_put(resource):
 	var consumedResource = consumes[resource]
@@ -221,10 +268,37 @@ func _produced_resource_timeout(produce):
 		_produced_resource_start_production(produce)
 	pass
 
-func _timeout(timerFunction):
+func _timeout():
 	for produce in produces.values(): _produced_resource_timeout(produce)
-	if has_method(timerFunction): call(timerFunction)
+	var strName = Game.structureDefinitions[type].name
+	var callName = '_' + strName + '_timeout'
+	if has_method(callName): call(callName)
 	pass
+
+func _Airport_create_data():
+	data.fighters = []
+	data.bombers = []
+	pass
+
+func _Airport_timeout():
+	if not consumes[Game.AIRPLANE].has:
+		return
+	var assignPlaneCalls = []
+	if data.fighters.size() < Game.CONFIGURATION.airportFighterLimit:
+		assignPlaneCalls.append('_Airport_add_fighter')
+	if data.bombers.size() < Game.CONFIGURATION.airportBomberLimit:
+		assignPlaneCalls.append('_Airport_add_bomber')
+	if assignPlaneCalls.empty():
+		return
+	call(assignPlaneCalls[randi() % assignPlaneCalls.size()])
+	consumes[Game.AIRPLANE].has = false
+	pass
+
+func _Airport_add_fighter():
+	data.fighters.append({})
+
+func _Airport_add_bomber():
+	data.bombers.append({})
 
 func _consumed_resource_add(resource):
 	consumes[resource] = {

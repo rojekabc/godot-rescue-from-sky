@@ -7,7 +7,9 @@ var timetick = 0
 
 const CONFIGURATION = {
 		verbose = true,
-		transportSpeed = 20 # number of units (unit is a distance between structures) per second
+		transportSpeed = 20, # number of units (unit is a distance between structures) per second
+		airportFighterLimit = 6,
+		airportBomberLimit = 6
 	}
 
 const resourceDefinitions = {}
@@ -29,7 +31,6 @@ func _ready():
 		name = 'City',
 		type = CITY,
 		acronym = 'C',
-		timerFunction = '_city_timeout',
 		consumes = [FOOD],
 		produces = [MANPOWER]
 	}
@@ -37,7 +38,6 @@ func _ready():
 		name = 'Village',
 		type = VILLAGE,
 		acronym = 'V',
-		timerFunction = '_village_timeout',
 		consumes = [],
 		produces = [FOOD]
 	}
@@ -45,7 +45,6 @@ func _ready():
 		name = 'Bunker',
 		type = BUNKER,
 		acronym = 'B',
-		timerFunction = '_bunker_timeout',
 		consumes = [FOOD, MANPOWER],
 		produces = [ARMY]
 	}
@@ -53,7 +52,6 @@ func _ready():
 		name = 'Airport',
 		type = AIRPORT,
 		acronym = 'A',
-		timerFunction = '_airport_timeout',
 		consumes = [AIRPLANE],
 		produces = []
 	}
@@ -61,7 +59,6 @@ func _ready():
 		name = 'Factory',
 		type = FACTORY,
 		acronym = 'F',
-		timerFunction = '_factory_timeout',
 		consumes = [MANPOWER],
 		produces = [AIRPLANE]
 	}
@@ -69,7 +66,6 @@ func _ready():
 		name = 'Capital HQ',
 		type = CAPITAL,
 		acronym = 'HQ',
-		timerFunction = '_capital_timeout',
 		consumes = [FOOD, MANPOWER],
 		produces = [MANPOWER, ARMY]
 	}
