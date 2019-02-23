@@ -22,6 +22,7 @@ func _ready():
 	# Start all transport moves with monitoring them
 	$Map/Transports/Tween.start()
 	$Map/Transports/Tween.connect('tween_completed', self, '_transport_tween_completed')
+	# Enable mouse press processing
 	set_process_input( true )
 	pass
 
@@ -29,15 +30,14 @@ func _input(event):
 	if event is InputEventMouseButton and event.is_pressed() and event.button_index == BUTTON_LEFT:
 		var strPressed = _find_structure_at(event.global_position)
 		if strPressed:
-			print('Pressed ' + Game.structureDefinitions[strPressed.type].name)
+			Game.verbose('Pressed ' + strPressed.get_name())
 	pass
 
-const STRUCTURE_SIZE = 60
 func _find_structure_at(global_position):
 	for structure in $Map/Structures.get_children():
 		var rect = Rect2(
-			structure.global_position.x-structure.HALF_SIZE, structure.global_position.y-STRUCTURE_SIZE/2,
-			STRUCTURE_SIZE, STRUCTURE_SIZE)
+			structure.global_position.x-structure.HALF_SIZE, structure.global_position.y-structure.HALF_SIZE,
+			structure.FULL_SIZE, structure.FULL_SIZE)
 		if rect.has_point(global_position):
 			return structure;
 	return null
@@ -186,16 +186,19 @@ func assign_type(strType, timer):
 
 func get_type():
 	return type
+
+func get_name():
+	return Game.playerDefinitions[ownerIdx].name + '.' + Game.structureDefinitions[type].name
 	
 func _ready():
 	pass
 
 func get_corners():
 	var result = []
-	result.append(Vector2(global_position.x-HALF_SIZE, global_position.y-HALF_SIZE))
-	result.append(Vector2(global_position.x-HALF_SIZE, global_position.y+HALF_SIZE))
-	result.append(Vector2(global_position.x+HALF_SIZE, global_position.y-HALF_SIZE))
-	result.append(Vector2(global_position.x+HALF_SIZE, global_position.y+HALF_SIZE))
+	result.append(Vector2(position.x-HALF_SIZE, position.y-HALF_SIZE))
+	result.append(Vector2(position.x-HALF_SIZE, position.y+HALF_SIZE))
+	result.append(Vector2(position.x+HALF_SIZE, position.y-HALF_SIZE))
+	result.append(Vector2(position.x+HALF_SIZE, position.y+HALF_SIZE))
 	return result
 
 func consumed_resource_put(resource):
@@ -216,11 +219,9 @@ func _produced_resource_distribute(produce):
 		if not consumer.consumed_resource_may_send(produce.resource):
 			continue
 		Game.verbose(
-			\"Structure \" + Game.playerDefinitions[ownerIdx].name
-			+ \".\" + Game.structureDefinitions[type].name
+			get_name()
 			+ \" send \" + Game.resourceDefinitions[produce.resource].name
-			+ \" to \" + Game.playerDefinitions[consumer.ownerIdx].name
-			+ \".\" + Game.structureDefinitions[consumer.type].name)
+			+ \" to \" + consumer.get_name())
 		var transport = Game.getWorld().transport_start(self, consumer, produce.resource)
 		produce.has = false
 		consumer.consumed_resource_wait(produce.resource)
@@ -232,8 +233,7 @@ func _produced_resource_produce_tick(produce):
 		produce.has = true
 		produce.producing = false
 		Game.verbose(
-			\"Structure \" + Game.playerDefinitions[ownerIdx].name
-			+ \".\" + Game.structureDefinitions[type].name
+			get_name()
 			+ \" produced \" + Game.resourceDefinitions[produce.resource].name)
 	pass
 
@@ -255,8 +255,7 @@ func _produced_resource_start_production(produce):
 	produce.producing = true
 	produce.timeout = resDef.timeout
 	Game.verbose(
-		\"Structure \" + Game.playerDefinitions[ownerIdx].name
-		+ \".\" + Game.structureDefinitions[type].name
+		get_name()
 		 + \" start production of \" + Game.resourceDefinitions[produce.resource].name)
 
 func _produced_resource_timeout(produce):
