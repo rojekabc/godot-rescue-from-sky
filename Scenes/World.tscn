@@ -110,12 +110,7 @@ func _find_producers_of(ownerIdx, resource):
 
 func ui_show_squad(data):
 	$UI/Suqad.setPlanes(data)
-	$UI/Suqad.show()
 	pass
-
-func ui_hide_squad():
-	$UI/Suqad.clearPlanes()
-	$UI/Suqad.hide()
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
@@ -163,9 +158,6 @@ var ownerIdx
 
 var consumes = {}
 var produces = {}
-
-# UI show information flag
-var ui_show_flag = false
 
 # structure specific data
 var data = {}
@@ -312,11 +304,7 @@ func _Airport_timeout():
 	pass
 
 func _Airport_pressed(world):
-	ui_show_flag = not ui_show_flag
-	if ui_show_flag:
-		world.ui_show_squad(data)
-	else:
-		world.ui_hide_squad()
+	world.ui_show_squad(data)
 
 func _Airport_add_fighter():
 	data.fighters.append({})
@@ -423,6 +411,8 @@ extents = Vector2( 15, 15 )
 resource_name = "uiSquad"
 script/source = "extends PanelContainer
 
+var currentData = null
+
 func _ready():
 	pass
 
@@ -431,6 +421,12 @@ func clearPlanes():
 
 func setPlanes(data):
 	clearPlanes()
+	if data == currentData:
+		hide()
+		currentData = null
+	else:
+		show()
+		currentData = data
 	for i in range(data.fighters.size()):
 		var checkbox = CheckBox.new()
 		checkbox.text = 'Fighter ' + str(i)
@@ -468,8 +464,6 @@ playback/speed = 1.0
 _sections_unfolded = [ "playback" ]
 
 [node name="Templates" type="Node" parent="Map" index="3"]
-
-editor/display_folded = true
 
 [node name="Structure" type="StaticBody2D" parent="Map/Templates" index="0"]
 
@@ -713,7 +707,6 @@ _sections_unfolded = [ "Size Flags" ]
 
 [node name="Actions" type="VBoxContainer" parent="UI/Suqad/Container/Columns" index="1"]
 
-editor/display_folded = true
 anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
@@ -729,7 +722,7 @@ size_flags_horizontal = 1
 size_flags_vertical = 1
 alignment = 0
 
-[node name="Bombard" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="0"]
+[node name="Attack" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="0"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -749,12 +742,12 @@ toggle_mode = false
 enabled_focus_mode = 2
 shortcut = null
 group = null
-text = "Bombard"
+text = "Attack"
 flat = false
 align = 1
 _sections_unfolded = [ "custom_fonts" ]
 
-[node name="Attack" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="1"]
+[node name="Patrol" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="1"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -763,32 +756,6 @@ anchor_bottom = 0.0
 margin_top = 37.0
 margin_right = 92.0
 margin_bottom = 70.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-focus_mode = 2
-mouse_filter = 0
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
-custom_fonts/font = ExtResource( 6 )
-toggle_mode = false
-enabled_focus_mode = 2
-shortcut = null
-group = null
-text = "Attack"
-flat = false
-align = 1
-_sections_unfolded = [ "custom_fonts" ]
-
-[node name="Button" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="2"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-margin_top = 74.0
-margin_right = 92.0
-margin_bottom = 107.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
 focus_mode = 2
