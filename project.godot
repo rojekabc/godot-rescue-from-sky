@@ -16,6 +16,7 @@ config/icon="res://icon.png"
 
 [autoload]
 
+Tool="*res://Scenes/Tool.gd"
 Game="*res://Scenes/Game.gd"
 
 [rendering]

@@ -1,7 +1,11 @@
-[gd_scene load_steps=12 format=2]
+[gd_scene load_steps=17 format=2]
 
 [ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
 [ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=2]
+[ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=3]
+[ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=4]
+[ext_resource path="res://Resources/TitleFont.tres" type="DynamicFont" id=5]
+[ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=6]
 
 [sub_resource type="GDScript" id=1]
 
@@ -11,8 +15,9 @@ script/source = "extends Node
 func _ready():
 	# Enable randomization
 	randomize()
-	# Hide template nodes
-	_templates_hide()
+	# Hide templates
+	Tool.children_action($Map/Templates, 'hide')
+	Tool.children_action($UI, 'hide')
 	# Start timestamp calculation from beginig of play
 	$Timer.connect('timeout', self, \"_timeout\")
 	# Prepare materials
@@ -30,7 +35,7 @@ func _input(event):
 	if event is InputEventMouseButton and event.is_pressed() and event.button_index == BUTTON_LEFT:
 		var strPressed = _find_structure_at(event.global_position)
 		if strPressed:
-			Game.verbose('Pressed ' + strPressed.get_name())
+			strPressed.pressed(self)
 	pass
 
 func _find_structure_at(global_position):
@@ -57,12 +62,6 @@ func _prepare_materials():
 
 func _timeout():
 	Game.timetick += 1
-
-# Hide template elements
-func _templates_hide():
-	for child in $Map/Templates.get_children():
-		child.visible = false
-	pass
 
 # Create map
 # Don't allow to cross other structure on the map
@@ -108,6 +107,15 @@ func _find_producers_of(ownerIdx, resource):
 		if structure.produces.has(resource):
 			result.append(structure)
 	return result
+
+func ui_show_squad(data):
+	$UI/Suqad.setPlanes(data)
+	$UI/Suqad.show()
+	pass
+
+func ui_hide_squad():
+	$UI/Suqad.clearPlanes()
+	$UI/Suqad.hide()
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
@@ -156,6 +164,9 @@ var ownerIdx
 var consumes = {}
 var produces = {}
 
+# UI show information flag
+var ui_show_flag = false
+
 # structure specific data
 var data = {}
 
@@ -180,9 +191,7 @@ func assign_type(strType, timer):
 		_consumed_resource_add(resource)
 	for resource in strDef.produces:
 		_produced_resource_add(resource)
-	var strName = Game.structureDefinitions[strType].name
-	var callName = '_' + strName + '_create_data'
-	if has_method(callName): call(callName)
+	_call_type_function('create_data')
 
 func get_type():
 	return type
@@ -267,11 +276,20 @@ func _produced_resource_timeout(produce):
 		_produced_resource_start_production(produce)
 	pass
 
+func _call_type_function(function, args=null):
+	var strName = Game.structureDefinitions[type].name
+	var callName = '_' + strName + '_' + function
+	if has_method(callName):
+		if args: call(callName, args)
+		else: call(callName)
+
+func pressed(world):
+	_call_type_function('pressed', world)
+	pass
+
 func _timeout():
 	for produce in produces.values(): _produced_resource_timeout(produce)
-	var strName = Game.structureDefinitions[type].name
-	var callName = '_' + strName + '_timeout'
-	if has_method(callName): call(callName)
+	_call_type_function('timeout')
 	pass
 
 func _Airport_create_data():
@@ -292,6 +310,13 @@ func _Airport_timeout():
 	call(assignPlaneCalls[randi() % assignPlaneCalls.size()])
 	consumes[Game.AIRPLANE].has = false
 	pass
+
+func _Airport_pressed(world):
+	ui_show_flag = not ui_show_flag
+	if ui_show_flag:
+		world.ui_show_squad(data)
+	else:
+		world.ui_hide_squad()
 
 func _Airport_add_fighter():
 	data.fighters.append({})
@@ -393,6 +418,31 @@ size = Vector2( 30, 30 )
 custom_solver_bias = 0.0
 extents = Vector2( 15, 15 )
 
+[sub_resource type="GDScript" id=10]
+
+resource_name = "uiSquad"
+script/source = "extends PanelContainer
+
+func _ready():
+	pass
+
+func clearPlanes():
+	Tool.children_action($Container/Columns/Planes/Container, 'queue_free')
+
+func setPlanes(data):
+	clearPlanes()
+	for i in range(data.fighters.size()):
+		var checkbox = CheckBox.new()
+		checkbox.text = 'Fighter ' + str(i)
+		$Container/Columns/Planes/Container.add_child(checkbox)
+	for i in range(data.bombers.size()):
+		var checkbox = CheckBox.new()
+		checkbox.text = 'Bomber ' + str(i)
+		$Container/Columns/Planes/Container.add_child(checkbox)
+	pass
+"
+_sections_unfolded = [ "Resource" ]
+
 [node name="World" type="Node" index="0"]
 
 script = SubResource( 1 )
@@ -405,6 +455,8 @@ script = SubResource( 1 )
 
 [node name="Transports" type="Node" parent="Map" index="2"]
 
+editor/display_folded = true
+
 [node name="Tween" type="Tween" parent="Map/Transports" index="0"]
 
 repeat = false
@@ -416,6 +468,8 @@ playback/speed = 1.0
 _sections_unfolded = [ "playback" ]
 
 [node name="Templates" type="Node" parent="Map" index="3"]
+
+editor/display_folded = true
 
 [node name="Structure" type="StaticBody2D" parent="Map/Templates" index="0"]
 
@@ -522,5 +576,234 @@ process_mode = 1
 wait_time = 1.0
 one_shot = false
 autostart = true
+
+[node name="UI" type="Container" parent="." index="2"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 40.0
+margin_bottom = 40.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 0
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+
+[node name="Suqad" type="PanelContainer" parent="UI" index="0"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = 301.0
+margin_top = 87.0
+margin_right = 567.0
+margin_bottom = 263.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 0
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+custom_styles/panel = ExtResource( 3 )
+script = SubResource( 10 )
+_sections_unfolded = [ "custom_styles" ]
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Container" type="VBoxContainer" parent="UI/Suqad" index="0"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 256.0
+margin_bottom = 166.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 1
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+alignment = 0
+
+[node name="Title" type="Label" parent="UI/Suqad/Container" index="0"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 246.0
+margin_bottom = 45.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 2
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 4
+custom_styles/normal = ExtResource( 4 )
+custom_fonts/font = ExtResource( 5 )
+text = "Squad"
+align = 1
+percent_visible = 1.0
+lines_skipped = 0
+max_lines_visible = -1
+_sections_unfolded = [ "custom_fonts", "custom_styles" ]
+
+[node name="Columns" type="HBoxContainer" parent="UI/Suqad/Container" index="1"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_top = 49.0
+margin_right = 246.0
+margin_bottom = 156.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 1
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+alignment = 0
+
+[node name="Planes" type="ScrollContainer" parent="UI/Suqad/Container/Columns" index="0"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 150.0
+margin_bottom = 107.0
+rect_min_size = Vector2( 150, 100 )
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = true
+mouse_filter = 0
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+scroll_horizontal_enabled = true
+scroll_horizontal = 0
+scroll_vertical_enabled = true
+scroll_vertical = 0
+scroll_deadzone = 0
+_sections_unfolded = [ "Rect" ]
+
+[node name="Container" type="VBoxContainer" parent="UI/Suqad/Container/Columns/Planes" index="0"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 150.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 1
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 3
+size_flags_vertical = 1
+alignment = 0
+_sections_unfolded = [ "Size Flags" ]
+
+[node name="Actions" type="VBoxContainer" parent="UI/Suqad/Container/Columns" index="1"]
+
+editor/display_folded = true
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = 154.0
+margin_right = 246.0
+margin_bottom = 107.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 1
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+alignment = 0
+
+[node name="Bombard" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="0"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 92.0
+margin_bottom = 33.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+focus_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+custom_fonts/font = ExtResource( 6 )
+toggle_mode = false
+enabled_focus_mode = 2
+shortcut = null
+group = null
+text = "Bombard"
+flat = false
+align = 1
+_sections_unfolded = [ "custom_fonts" ]
+
+[node name="Attack" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="1"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_top = 37.0
+margin_right = 92.0
+margin_bottom = 70.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+focus_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+custom_fonts/font = ExtResource( 6 )
+toggle_mode = false
+enabled_focus_mode = 2
+shortcut = null
+group = null
+text = "Attack"
+flat = false
+align = 1
+_sections_unfolded = [ "custom_fonts" ]
+
+[node name="Button" type="Button" parent="UI/Suqad/Container/Columns/Actions" index="2"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_top = 74.0
+margin_right = 92.0
+margin_bottom = 107.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+focus_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 1
+custom_fonts/font = ExtResource( 6 )
+toggle_mode = false
+enabled_focus_mode = 2
+shortcut = null
+group = null
+text = "Patrol"
+flat = false
+align = 1
+_sections_unfolded = [ "custom_fonts" ]
 
 

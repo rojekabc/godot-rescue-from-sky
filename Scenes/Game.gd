@@ -24,7 +24,7 @@ func verbose(msg):
 		print(str(timetick) + ' : ' + msg)
 
 func getWorld():
-	return get_tree().get_root().get_child(1) # .get_node('World')
+	return get_tree().get_root().get_node('World')
 
 func _ready():
 	structureDefinitions[CITY] = {
