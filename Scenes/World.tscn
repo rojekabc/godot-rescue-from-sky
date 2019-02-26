@@ -108,8 +108,19 @@ func _find_producers_of(ownerIdx, resource):
 			result.append(structure)
 	return result
 
-func ui_show_squad(data):
-	$UI/Suqad.setPlanes(data)
+func _fix_panel_position(panel, callerPosition):
+	# positioning
+	var margin = 10
+	var uiWidth = panel.rect_size.x
+	if callerPosition.x < Game.MAP_WIDTH/2:
+		panel.rect_position = Vector2(Game.MAP_WIDTH - uiWidth - margin, margin)
+	else:
+		panel.rect_position = Vector2(margin, margin)
+
+func ui_squad_panel(airport):
+	var panel = $UI/Suqad
+	panel.setPlanes(airport)
+	_fix_panel_position(panel, airport.position)
 	pass
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
@@ -304,7 +315,7 @@ func _Airport_timeout():
 	pass
 
 func _Airport_pressed(world):
-	world.ui_show_squad(data)
+	world.ui_squad_panel(self)
 
 func _Airport_add_fighter():
 	data.fighters.append({})
@@ -411,7 +422,7 @@ extents = Vector2( 15, 15 )
 resource_name = "uiSquad"
 script/source = "extends PanelContainer
 
-var currentData = null
+var airport = null
 
 func _ready():
 	pass
@@ -419,14 +430,16 @@ func _ready():
 func clearPlanes():
 	Tool.children_action($Container/Columns/Planes/Container, 'queue_free')
 
-func setPlanes(data):
+func setPlanes(airport):
 	clearPlanes()
-	if data == currentData:
+	if self.airport == airport:
 		hide()
-		currentData = null
+		self.airport = null
+		return
 	else:
 		show()
-		currentData = data
+		self.airport = airport
+	var data = self.airport.data
 	for i in range(data.fighters.size()):
 		var checkbox = CheckBox.new()
 		checkbox.text = 'Fighter ' + str(i)
@@ -618,7 +631,7 @@ anchor_bottom = 0.0
 margin_left = 10.0
 margin_top = 10.0
 margin_right = 256.0
-margin_bottom = 166.0
+margin_bottom = 259.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
 mouse_filter = 1
@@ -658,7 +671,7 @@ anchor_right = 0.0
 anchor_bottom = 0.0
 margin_top = 49.0
 margin_right = 246.0
-margin_bottom = 156.0
+margin_bottom = 249.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
 mouse_filter = 1
@@ -673,21 +686,21 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_right = 150.0
-margin_bottom = 107.0
-rect_min_size = Vector2( 150, 100 )
+margin_right = 171.0
+margin_bottom = 200.0
+rect_min_size = Vector2( 150, 200 )
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = true
 mouse_filter = 0
 mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
+size_flags_horizontal = 3
 size_flags_vertical = 1
 scroll_horizontal_enabled = true
 scroll_horizontal = 0
 scroll_vertical_enabled = true
 scroll_vertical = 0
 scroll_deadzone = 0
-_sections_unfolded = [ "Rect" ]
+_sections_unfolded = [ "Rect", "Size Flags" ]
 
 [node name="Container" type="VBoxContainer" parent="UI/Suqad/Container/Columns/Planes" index="0"]
 
@@ -695,7 +708,7 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_right = 150.0
+margin_right = 171.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
 mouse_filter = 1
@@ -711,9 +724,9 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_left = 154.0
+margin_left = 175.0
 margin_right = 246.0
-margin_bottom = 107.0
+margin_bottom = 200.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
 mouse_filter = 1
@@ -728,7 +741,7 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
-margin_right = 92.0
+margin_right = 71.0
 margin_bottom = 33.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
@@ -754,7 +767,7 @@ anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
 margin_top = 37.0
-margin_right = 92.0
+margin_right = 71.0
 margin_bottom = 70.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
