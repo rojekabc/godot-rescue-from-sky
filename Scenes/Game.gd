@@ -2,12 +2,14 @@ extends Node
 
 enum STRUCTURE {CITY, VILLAGE, BUNKER, AIRPORT, FACTORY, CAPITAL}
 enum RESOURCE {MANPOWER, FOOD, ARMY, AIRPLANE}
+enum PLANE{FIGHTER, BOMBER}
 
 var timetick = 0
 
 const CONFIGURATION = {
-		verbose = true,
+		verbose = false,
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
+		squadSpeed = 60,
 		airportFighterLimit = 6,
 		airportBomberLimit = 6
 	}
@@ -25,6 +27,9 @@ func verbose(msg):
 
 func getWorld():
 	return get_tree().get_root().get_node('World')
+
+func getTimer():
+	return get_tree().get_root().get_node('World/Timer')
 
 func _ready():
 	structureDefinitions[CITY] = {
