@@ -74,7 +74,7 @@ func _select_target_action(globalPosition):
 	else:
 		return _fail('Unknown mission')
 	selectTarget.target = target
-	squad_start(selectTarget.source, target)
+	squad_start(selectTarget.source, target, selectTarget.planes)
 	selectTarget = null
 
 # Find element under point. From the list the structure will be always selected as more priority.
@@ -124,6 +124,9 @@ func _map_create():
 	for ownerIdx in range(2):
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
+			if structure.type == Game.AIRPORT:
+				structure.Airport_add_fighter()
+				structure.Airport_add_bomber()
 			while not _find_structures_at(structure.get_corners()).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx)
@@ -172,9 +175,10 @@ func _fix_panel_position(panel, callerPosition):
 	else:
 		panel.rect_position = Vector2(margin, margin)
 
-func select_target(airport):
+func select_target(airport, planes):
 	selectTarget = {
-		source = airport
+		source = airport,
+		planes = planes
 	}
 	_status('Select target')
 	pass
@@ -185,12 +189,18 @@ func ui_squad_panel(airport):
 	_fix_panel_position(panel, airport.position)
 	pass
 
-func squad_start(source, target):
+func _move_planes_data(source, target, planes):
+	for plane in planes:
+		source.data.planes.erase(plane)
+		target.data.planes.append(plane)
+
+func squad_start(source, target, planes):
 	var squad = $Map/Templates/Squad.duplicate()
 	squad.visible = true
 	squad.source = source
 	squad.target = target
 	squad.position = source.position
+	_move_planes_data(source, squad, planes)
 	$Map/Squads.add_child(squad)
 	target.targeting.append(squad)
 	_calculate_squad_tween(squad, squad.target)
@@ -217,6 +227,9 @@ func _calculate_squad_tween(squad, target):
 	if distance > Game.CONFIGURATION.squadSpeed:
 		time = $Timer.wait_time
 		targetPosition = squad.position + targetDirection*Game.CONFIGURATION.squadSpeed
+	# elif distance < 10:
+	#	# It's very close - the action can be started
+	#	pass
 	else:
 		time = $Timer.wait_time * distance / Game.CONFIGURATION.squadSpeed
 		targetPosition = squad.target.position
@@ -229,18 +242,22 @@ func _calculate_squad_tween(squad, target):
 func _tween_completed(object, key):
 	if object.is_in_group(\"Transport\"):
 		object.complete()
-		# change destination of targeting squads, if they are
-		for squad in object.targeting:
-			squad.target = squad.source
 		$Tween.remove(object, key)
 	elif object.is_in_group(\"Squad\"):
-		# squad reached target - TODO: action - attack/land etc.
-		if object.position == object.target.position:
-			object.queue_free()
-			$Tween.remove(object, key)
-		else: # recalculate next squad move
-			$Tween.remove(object, key)
-			_calculate_squad_tween(object, object.target)
+		# if object.position == object.source.position:
+		#	# try to land (if airport is still on squad side)
+		#	$Tween.remove(object, key)
+		#	object.queue_free()
+		#	pass
+		#if object.position == object.target.position:
+		#	# squad reached target - TODO: action - attack/land etc.
+		#	$Tween.remove(object, key)
+		#	object.target = object.source
+		#	_calculate_squad_tween(object, object.target)
+		#else:
+			# recalculate next squad move
+		$Tween.remove(object, key)
+		_calculate_squad_tween(object, object.target)
 	pass
 
 func _transport_create(sourceStructure, targetStructure, transportedResource):
@@ -262,7 +279,7 @@ _sections_unfolded = [ "Resource" ]
 [sub_resource type="GDScript" id=2]
 
 resource_name = "Structure"
-script/source = "extends StaticBody2D
+script/source = "extends Area2D
 
 const HALF_SIZE = 30
 const FULL_SIZE = 60
@@ -414,9 +431,9 @@ func _Airport_timeout():
 	var planeCount = _Airport_count_planes()
 	
 	if planeCount[Game.FIGHTER] < Game.CONFIGURATION.airportFighterLimit:
-		assignPlaneCalls.append('_Airport_add_fighter')
+		assignPlaneCalls.append('Airport_add_fighter')
 	if planeCount[Game.BOMBER] < Game.CONFIGURATION.airportBomberLimit:
-		assignPlaneCalls.append('_Airport_add_bomber')
+		assignPlaneCalls.append('Airport_add_bomber')
 		
 	if assignPlaneCalls.empty():
 		return
@@ -439,11 +456,15 @@ func _Airport_count_planes():
 func _Airport_pressed(world):
 	world.ui_squad_panel(self)
 
-func _Airport_add_fighter():
+func Airport_add_fighter():
 	data.planes.append({type=Game.FIGHTER})
 
-func _Airport_add_bomber():
+func Airport_add_bomber():
 	data.planes.append({type=Game.BOMBER})
+
+func Airport_add_planes(planes):
+	for plane in planes:
+		data.planes.append(plane)
 
 func _consumed_resource_add(resource):
 	consumes[resource] = {
@@ -485,7 +506,7 @@ size = Vector2( 60, 60 )
 [sub_resource type="RectangleShape2D" id=5]
 
 custom_solver_bias = 0.0
-extents = Vector2( 30, 30 )
+extents = Vector2( 20, 20 )
 
 [sub_resource type="GDScript" id=6]
 
@@ -517,6 +538,9 @@ func get_name():
 
 func complete():
 	target.consumed_resource_put(resource)
+	for targetby in targeting:
+		# back to source - no more target exists
+		targetby.target = targetby.source
 	Game.verbose(\"Transport completed from \"
 			+ Game.playerDefinitions[source.ownerIdx].name
 			+ \".\" + Game.structureDefinitions[source.type].name
@@ -556,8 +580,31 @@ script/source = "extends Area2D
 var source
 var target
 var targeting = []
+var data = {planes = []}
 
 func _ready():
+	# structures
+	connect('body_entered', self, '_body_entered')
+	# transorts
+	connect('area_entered', self, '_body_entered')
+	pass
+
+func catch_target():
+	if target == source:
+		source.Airport_add_planes(data.planes)
+		data.planes.clear()
+		print('Landing')
+		queue_free()
+	else:
+		print('Attack')
+		target = source
+	pass
+
+func _body_entered(body):
+	if target == body:
+		catch_target()
+		pass
+		
 	pass
 "
 _sections_unfolded = [ "Resource" ]
@@ -584,6 +631,7 @@ extents = Vector2( 15, 15 )
 
 [sub_resource type="GDScript" id=14]
 
+resource_name = "UISquad"
 script/source = "extends PanelContainer
 
 var airport = null
@@ -593,10 +641,21 @@ func _ready():
 	pass
 
 func _target_pressed():
+	var planes = _list_selected_planes()
+	if planes.empty():
+		Game.getWorld()._info('Select any plane')
+		return
 	hide()
-	Game.getWorld().select_target(airport)
+	Game.getWorld().select_target(airport, planes)
 	airport = null
 	pass
+
+func _list_selected_planes():
+	var result = []
+	for checkbox in $Container/Columns/Planes/Container.get_children():
+		if checkbox.pressed:
+			result.append(checkbox.get_meta('plane'))
+	return result
 
 func clearPlanes():
 	Tool.children_action($Container/Columns/Planes/Container, 'queue_free')
@@ -617,6 +676,7 @@ func setPlanes(airport):
 			checkbox.text = 'Fighter'
 		else:
 			checkbox.text = 'Bomber'
+		checkbox.set_meta('plane', plane)
 		$Container/Columns/Planes/Container.add_child(checkbox)
 	pass
 "
@@ -674,24 +734,22 @@ script = SubResource( 1 )
 
 [node name="Templates" type="Node" parent="Map" index="3"]
 
-[node name="Structure" type="StaticBody2D" parent="Map/Templates" index="0" groups=[
+[node name="Structure" type="Area2D" parent="Map/Templates" index="0" groups=[
 "Structure",
 ]]
 
 editor/display_folded = true
 position = Vector2( 68.0187, 77.5413 )
-input_pickable = false
-collision_layer = 1
-collision_mask = 1
-constant_linear_velocity = Vector2( 0, 0 )
-constant_angular_velocity = 0.0
-friction = 1.0
-bounce = 0.0
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+collision_mask = 0
+audio_bus_override = false
+audio_bus_name = "Master"
 script = SubResource( 2 )
-_sections_unfolded = [ "Material", "Transform" ]
-__meta__ = {
-"_edit_group_": true
-}
+_sections_unfolded = [ "Collision", "Material", "Transform" ]
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
 
@@ -701,7 +759,6 @@ _sections_unfolded = [ "Material", "Region", "Transform" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
 
-visible = false
 shape = SubResource( 5 )
 _sections_unfolded = [ "Transform" ]
 
@@ -737,13 +794,11 @@ gravity_vec = Vector2( 0, 1 )
 gravity = 98.0
 linear_damp = 0.1
 angular_damp = 1.0
+collision_mask = 0
 audio_bus_override = false
 audio_bus_name = "Master"
 script = SubResource( 6 )
-_sections_unfolded = [ "Material", "Pause", "Transform" ]
-__meta__ = {
-"_edit_group_": true
-}
+_sections_unfolded = [ "Collision", "Material", "Pause", "Transform" ]
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
 
@@ -783,6 +838,7 @@ _sections_unfolded = [ "custom_fonts" ]
 "Squad",
 ]]
 
+editor/display_folded = true
 position = Vector2( 349.767, 72.1741 )
 input_pickable = true
 gravity_vec = Vector2( 0, 1 )
@@ -792,9 +848,7 @@ angular_damp = 1.0
 audio_bus_override = false
 audio_bus_name = "Master"
 script = SubResource( 10 )
-__meta__ = {
-"_edit_group_": true
-}
+_sections_unfolded = [ "Collision" ]
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Squad" index="0"]
 
@@ -825,7 +879,6 @@ _sections_unfolded = [ "Rect" ]
 
 [node name="Suqad" type="PanelContainer" parent="Map/UI" index="0"]
 
-editor/display_folded = true
 anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
