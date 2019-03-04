@@ -18,6 +18,7 @@ config/icon="res://icon.png"
 
 Tool="*res://Scenes/Tool.gd"
 Game="*res://Scenes/Game.gd"
+PlaneHolder="*res://Interfaces/PlaneHolder.gd"
 
 [rendering]
 

@@ -71,6 +71,11 @@ func _select_target_action(globalPosition):
 			return _fail('Unknown mission against your transport')
 		else:
 			_info('Planned bombarding of ' + target.get_name())
+	elif target.is_in_group('Squad'):
+		if target.ownerIdx == selectTarget.source.ownerIdx:
+			return _fail('Unknown mission against your squad')
+		else:
+			_info('Planned attack on ' + target.get_name())
 	else:
 		return _fail('Unknown mission')
 	selectTarget.target = target
@@ -90,6 +95,8 @@ func _find_element_at(globalPosition):
 				selected = collider
 				break
 			elif collider.is_in_group('Transport'):
+				selected = collider
+			elif collider.is_in_group('Squad'):
 				selected = collider
 	return selected
 
@@ -125,8 +132,8 @@ func _map_create():
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
 			if structure.type == Game.AIRPORT:
-				structure.add_fighter()
-				structure.add_bomber()
+				PlaneHolder.add_bomber(structure)
+				PlaneHolder.add_fighter(structure)
 			while not _find_structures_at(structure.get_corners()).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx)
@@ -189,17 +196,14 @@ func ui_squad_panel(airport):
 	_fix_panel_position(panel, airport.position)
 	pass
 
-func _move_planes_data(source, target, planes):
-	source.rem_planes(planes)
-	target.add_planes(planes)
-
 func squad_start(source, target, planes):
 	var squad = $Map/Templates/Squad.duplicate()
 	squad.visible = true
 	squad.source = source
 	squad.target = target
 	squad.position = source.position
-	_move_planes_data(source, squad, planes)
+	squad.ownerIdx = source.ownerIdx
+	PlaneHolder.move_planes(source, squad, planes)
 	$Map/Squads.add_child(squad)
 	target.targeting.append(squad)
 	_calculate_squad_tween(squad, squad.target)
@@ -293,32 +297,12 @@ var produces = {}
 # structure specific data
 var data = {}
 
-#### Interface of targeting ####
+#### BEGIN Targeting ####
 var targeting = []
 #### --- END --- ####
 
-### BEGIN Plane holder ###
 # The information about planes is updated
 signal update_planes(object, planesData)
-
-func add_fighter():
-	data.planes.append({type=Game.FIGHTER})
-	emit_signal('update_planes', self, data.planes)
-
-func add_bomber():
-	data.planes.append({type=Game.BOMBER})
-	emit_signal('update_planes', self, data.planes)
-
-func add_planes(planesData):
-	for plane in planesData:
-		data.planes.append(plane)
-	emit_signal('update_planes', self, data.planes)
-	
-func rem_planes(planesData):
-	for plane in planesData:
-		data.planes.erase(plane)
-	emit_signal('update_planes', self, data.planes)
-### END Plane Holder ###
 
 # Register consumer, which will receive produced resource
 func register_consumer(resource, consumer):
@@ -442,10 +426,6 @@ func _timeout():
 	_call_type_function('timeout')
 	pass
 
-func _Airport_create_data():
-	data.planes = []
-	pass
-
 func _Airport_timeout():
 	if not consumes[Game.AIRPLANE].has:
 		return
@@ -460,14 +440,15 @@ func _Airport_timeout():
 	if assignPlaneCalls.empty():
 		return
 		
-	call(assignPlaneCalls[randi() % assignPlaneCalls.size()])
+	PlaneHolder.call(assignPlaneCalls[randi() % assignPlaneCalls.size()], self)
 	consumes[Game.AIRPLANE].has = false
 	pass
 
 func _Airport_count_planes():
 	var fighterCount = 0
 	var bomberCount = 0
-	for plane in data.planes:
+	var planes = PlaneHolder.get_planes_data(self)
+	for plane in planes:
 		if plane.type == Game.FIGHTER: fighterCount += 1
 		if plane.type == Game.BOMBER: bomberCount += 1
 	return {
@@ -530,7 +511,7 @@ var target
 var resource
 var ownerIdx
 
-#### Interface of targeting ####
+#### BEGIN Targeting ####
 var targeting = []
 #### --- END --- ####
 
@@ -591,30 +572,13 @@ script/source = "extends Area2D
 
 var source
 var target
+var ownerIdx
 var targeting = []
-var data = {planes = []}
+var data = {}
 
 ### BEGIN Plane holder ###
 # The information about planes is updated
 signal update_planes(object, planesData)
-
-func add_fighter():
-	data.planes.append({type=Game.FIGHTER})
-	emit_signal('update_planes', self, data.planes)
-
-func add_bomber():
-	data.planes.append({type=Game.BOMBER})
-	emit_signal('update_planes', self, data.planes)
-
-func add_planes(planesData):
-	for plane in planesData:
-		data.planes.append(plane)
-	emit_signal('update_planes', self, data.planes)
-
-func rem_planes(planesData):
-	for plane in planesData:
-		data.planes.erase(plane)
-	emit_signal('update_planes', self, data.planes)
 ### END Plane Holder ###
 
 func _ready():
@@ -626,8 +590,8 @@ func _ready():
 
 func catch_target():
 	if target == source:
-		source.add_planes(data.planes)
-		data.planes.clear()
+		PlaneHolder.add_planes(source, PlaneHolder.get_planes_data(self))
+		PlaneHolder.rem_all_planes(self)
 		print('Landing')
 		queue_free()
 	else:
