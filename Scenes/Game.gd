@@ -10,8 +10,8 @@ const CONFIGURATION = {
 		verbose = false,
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		squadSpeed = 60,
-		airportFighterLimit = 6,
-		airportBomberLimit = 6
+		airportFighterLimit = 100,
+		airportBomberLimit = 100
 	}
 
 const resourceDefinitions = {}
