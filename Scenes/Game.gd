@@ -7,6 +7,12 @@ enum PLANE{FIGHTER, BOMBER}
 var timetick = 0
 var AirPlane = preload('res://Objects/AirPlane.gd')
 
+# interfaces
+var Targetable = preload('res://Interfaces/Targetable.gd')
+var Moveable = preload('res://Interfaces/Moveable.gd')
+var PlaneHolder = preload('res://Interfaces/PlaneHolder.gd')
+var Destructable = preload('res://Interfaces/Destructable.gd')
+
 const TEST_CONFIGURATION = {
 		verbose = true,
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second

@@ -1,27 +1,27 @@
-extends Node
+var object
 
-func _ready():
-	pass
+var hp
+var destroyFunc
 
-func assign(obj, destroy_func = 'destroy'):
-	obj.data.hp = 100
-	obj.data.destroyFunc = destroy_func
+func _init(object):
+	self.object = object
+	self.hp = 100
 
-func is_destroyed(obj):
-	return obj.data.hp <= 0
+func assign(destroy_func = 'destroy'):
+	destroyFunc = destroy_func
 
-func hit(obj, points):
-	if is_destroyed(obj):
+func is_destroyed():
+	return hp <= 0
+
+func hit(points):
+	if is_destroyed():
 		return
 		
-	# TODO: some unification
-	Game.verbose('Hit ' + str(points) + ' points to ' + obj.get_name())
-	if obj.data.hp > points:
-		obj.data.hp -= points
+	Game.verbose('Hit ' + str(points) + ' points to ' + object.get_name())
+	if hp > points:
+		hp -= points
 	else:
-		Game.verbose(obj.get_name() + ' destroyed')
-		obj.data.hp = 0
-		var destroyFunc = obj.data.destroyFunc
-		if destroyFunc and obj.has_method(destroyFunc):
-			obj.call(destroyFunc)
-
+		Game.verbose(object.get_name() + ' destroyed')
+		hp = 0
+		if destroyFunc and object.has_method(destroyFunc):
+			object.call(destroyFunc)

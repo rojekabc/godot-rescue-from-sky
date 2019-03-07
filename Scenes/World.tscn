@@ -132,8 +132,8 @@ func _map_create():
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
 			if structure.type == Game.AIRPORT:
-				PlaneHolder.add_plane(structure, _airplane_create(ownerIdx, Game.FIGHTER))
-				PlaneHolder.add_plane(structure, _airplane_create(ownerIdx, Game.BOMBER))
+				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.FIGHTER))
+				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.BOMBER))
 			while not _find_structures_at(structure.get_corners()).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx)
@@ -199,14 +199,13 @@ func ui_squad_panel(airport):
 func squad_start(source, target, planes):
 	var squad = $Map/Templates/Squad.duplicate()
 	squad.visible = true
-	squad.source = source
-	squad.target = target
 	squad.position = source.position
 	squad.ownerIdx = source.ownerIdx
-	PlaneHolder.move_planes(source, squad, planes)
+	squad.Moveable.assign(source, target)
+	source.PlaneHolder.rem_planes(planes)
+	squad.PlaneHolder.add_planes(planes)
 	$Map/Squads.add_child(squad)
-	target.targeting.append(squad)
-	_calculate_squad_tween(squad, squad.target)
+	_calculate_squad_tween(squad, squad.Moveable.target)
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
@@ -235,7 +234,7 @@ func _calculate_squad_tween(squad, target):
 	#	pass
 	else:
 		time = $Timer.wait_time * distance / Game.CONFIGURATION.squadSpeed
-		targetPosition = squad.target.position
+		targetPosition = squad.Moveable.target.position
 	$Tween.interpolate_property(squad, \"position\",
 		squad.position, targetPosition,
 		time, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
@@ -248,13 +247,12 @@ func _tween_completed(object, key):
 		# $Tween.remove(object, key)
 	elif object.is_in_group(\"Squad\"):
 		$Tween.remove(object, key)
-		_calculate_squad_tween(object, object.target)
+		_calculate_squad_tween(object, object.Moveable.target)
 	pass
 
 func _transport_create(sourceStructure, targetStructure, transportedResource):
 	var transport = $Map/Templates/Trasnport.duplicate()
 	transport.setup(sourceStructure, targetStructure, transportedResource)
-	Destructable.assign(transport)
 	return transport
 
 func _structure_create(ownerIdx, type):
@@ -264,12 +262,10 @@ func _structure_create(ownerIdx, type):
 	structure.ownerIdx = ownerIdx
 	structure.random_position(ownerIdx)
 	structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
-	Destructable.assign(structure)
 	return structure
 
 func _airplane_create(ownerIdx, type):
 	var airplane = Game.AirPlane.new(ownerIdx, type)
-	Destructable.assign(airplane)
 	return airplane
 
 	"
@@ -290,15 +286,19 @@ var ownerIdx
 var consumes = {}
 var produces = {}
 
-# structure specific data
-var data = {}
-
-#### BEGIN Targeting ####
-var targeting = []
-#### --- END --- ####
+var PlaneHolder
+var Destructable
+var Targetable
 
 # The information about planes is updated
 signal update_planes(object, planesData)
+
+func _init():
+	Destructable = Game.Destructable.new(self)
+	Targetable = Game.Targetable.new(self)
+
+func _Airport_create_data():
+	PlaneHolder = Game.PlaneHolder.new(self)
 
 # Register consumer, which will receive produced resource
 func register_consumer(resource, consumer):
@@ -508,19 +508,20 @@ extents = Vector2( 20, 20 )
 resource_name = "Transport"
 script/source = "extends Area2D
 
-var source
-var target
 var resource
 var ownerIdx
 
-var data = {}
-#### BEGIN Targeting ####
-var targeting = []
-#### --- END --- ####
+var Moveable
+var Destructable
+var Targetable
+
+func _init():
+	Moveable = Game.Moveable.new(self)
+	Destructable = Game.Destructable.new(self)
+	Targetable = Game.Targetable.new(self)
 
 func setup(sourceStructure, targetStructure, transportedResource):
-	source = sourceStructure
-	target = targetStructure
+	Moveable.assign(sourceStructure, targetStructure)
 	resource = transportedResource
 	ownerIdx = sourceStructure.ownerIdx
 	$Acronym.text = Game.resourceDefinitions[resource].acronym
@@ -530,33 +531,30 @@ func _ready():
 	pass
 
 func get_name():
-	return Game.playerDefinitions[source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name
+	return Game.playerDefinitions[Moveable.source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name
 
 # destroy after hit
 func destroy():
 	# Resource won't go to the target - inform it
-	target.consumed_resource_reject(resource)
+	Moveable.target.consumed_resource_reject(resource)
 	# clean up the object
 	clean_up()
 
 # clean up the object
 func clean_up():
-	# back to source - no more target exists
-	for targetby in targeting:
-		targetby.target = targetby.source
-	
+	Targetable.removed()
 	# remove the object		
 	Game.getWorld().get_node('Tween').remove(self, 'position')
 	queue_free()
 
 func complete():
 	Game.verbose(\"Transport completed from \"
-			+ Game.playerDefinitions[source.ownerIdx].name
-			+ \".\" + Game.structureDefinitions[source.type].name
+			+ Game.playerDefinitions[Moveable.source.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[Moveable.source.type].name
 			+ \" send \" + Game.resourceDefinitions[resource].name
-			+ \" to \" + Game.playerDefinitions[target.ownerIdx].name
-			+ \".\" + Game.structureDefinitions[target.type].name)
-	target.consumed_resource_put(resource)
+			+ \" to \" + Game.playerDefinitions[Moveable.target.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[Moveable.target.type].name)
+	Moveable.target.consumed_resource_put(resource)
 	clean_up()
 	pass
 "
@@ -587,11 +585,11 @@ extents = Vector2( 15, 15 )
 resource_name = "Squad"
 script/source = "extends Area2D
 
-var source
-var target
 var ownerIdx
-var targeting = []
-var data = {}
+
+var Moveable
+var Targetable
+var PlaneHolder
 
 ### BEGIN Plane holder ###
 # The information about planes is updated
@@ -605,28 +603,28 @@ func _ready():
 	connect('area_entered', self, '_body_entered')
 	pass
 
+func _init():
+	Moveable = Game.Moveable.new(self)
+	Targetable = Game.Targetable.new(self)
+	PlaneHolder = Game.PlaneHolder.new(self)
+
 func clean():
-	target.targeting.erase(self)
-	for targetBy in targeting:
-		targetBy.target = targetBy.source
+	Moveable.stop_targeting()
+	Targetable.removed()
 	queue_free()
 
 func catch_target():
-	if target == source:
-		PlaneHolder.add_planes(source, PlaneHolder.get_planes_data(self))
-		PlaneHolder.rem_all_planes(self)
+	if Moveable.is_home():
+		PlaneHolder.move_planes(Moveable.source)
 		Game.verbose('Squad landing')
 		clean()
 	else:
-		# Remove from targeting elements
-		target.targeting.erase(self)
-		# Attak the target
 		attack_target()
-		# Back to airport
-		target = source
-	pass
+		Moveable.stop_targeting()
+		Moveable.move_home()
 
 func attack_target():
+	var target = Moveable.target
 	if target.is_in_group('Structure'):
 		attack_structure()
 	elif target.is_in_group('Transport'):
@@ -635,23 +633,21 @@ func attack_target():
 		attack_squad()
 
 func attack_structure():
-	var planes = PlaneHolder.get_planes_data(self)
-	for plane in planes:
+	for plane in PlaneHolder.planes:
 		if plane.type == Game.BOMBER:
-			Destructable.hit(target, Game.CONFIGURATION.squadStructureBombardHitPoints)
+			Moveable.hit_target(Game.CONFIGURATION.squadStructureBombardHitPoints)
 
 func attack_transport():
-	var planes = PlaneHolder.get_planes_data(self)
-	for plane in planes:
+	for plane in PlaneHolder.planes:
 		if can_bombard_transport(plane):
-			Destructable.hit(target, 100)
+			Moveable.hit_target(100)
 
 func can_bombard_transport(plane):
 	return plane.type == Game.BOMBER and (randi() % 100 <= Game.CONFIGURATION.squadTransportBombardDestoryChance)
 
 func attack_squad():
-	var squadPlanes = PlaneHolder.get_planes_data(self)
-	var targetPlanes = PlaneHolder.get_planes_data(target)
+	var squadPlanes = PlaneHolder.planes
+	var targetPlanes = Moveable.get_target_planes()
 	
 	# Algorithm - hit random from oposite side
 	attack_planes(squadPlanes, targetPlanes)
@@ -663,12 +659,12 @@ func attack_squad():
 	if squadPlanes.empty():
 		clean()
 	if targetPlanes.empty():
-		target.clean()
+		Moveable.target.clean()
 
 func remove_destroyed_planes(squadPlanes):
 	var destroyed = []
 	for plane in squadPlanes:
-		if Destructable.is_destroyed(plane):
+		if plane.Destructable.is_destroyed():
 			destroyed.append(plane)
 	for plane in destroyed:
 		squadPlanes.erase(plane)
@@ -681,11 +677,11 @@ func attack_planes(squadPlanes, targetPlanes):
 			hitPoints = Game.CONFIGURATION.squadBomberHitPoints
 		elif plane.type == Game.FIGHTER:
 			hitPoints = Game.CONFIGURATION.squadFighterHitPoints
-		Destructable.hit(targetPlane, hitPoints)
+		targetPlane.Destructable.hit(hitPoints)
 	
 
 func _body_entered(body):
-	if target == body:
+	if Moveable.target == body:
 		catch_target()
 		pass
 		
@@ -794,7 +790,7 @@ func set_airport(airport):
 		# if self.airport != null:
 		#	_detach_airport_view()
 		_attach_airport_view(airport)
-	append_planes(self.airport.data.planes)
+	append_planes(self.airport.PlaneHolder.planes)
 	pass
 "
 _sections_unfolded = [ "Resource" ]

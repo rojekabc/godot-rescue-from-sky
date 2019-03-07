@@ -1,11 +1,12 @@
 var type
 var ownerIdx
-var data = {}
+
+var Destructable
 	
 func _init(ownerIdx, airplaneType):
 	self.type = airplaneType
 	self.ownerIdx = ownerIdx
-	pass
+	Destructable = Game.Destructable.new(self)
 
 func get_name():
 	var planeTypeName = 'UFO'

@@ -1,38 +1,29 @@
-extends Node
+var object
 
-func _ready():
-	pass
+var planes = []
 
-func create_data(obj):
-	if not obj.data.has('planes'):
-		obj.data.planes = []
-	return obj.data.planes
+func _init(object):
+	self.object = object
 
-func add_plane(obj, plane):
-	var planes = create_data(obj)
+func add_plane(plane):
 	planes.append(plane)
-	obj.emit_signal('update_planes', obj, planes)
+	object.emit_signal('update_planes', object, planes)
 
-func get_planes_data(obj):
-	return create_data(obj)
-
-func add_planes(obj, planesData):
-	var planes = create_data(obj)
+func add_planes(planesData):
 	for plane in planesData:
 		planes.append(plane)
-	obj.emit_signal('update_planes', obj, planes)
+	object.emit_signal('update_planes', object, planes)
 	
-func rem_planes(obj, planesData):
-	var planes = create_data(obj)
+func rem_planes(planesData):
 	for plane in planesData:
 		planes.erase(plane)
-	obj.emit_signal('update_planes', obj, planes)
+	object.emit_signal('update_planes', object, planes)
 
-func rem_all_planes(obj):
-	var planes = create_data(obj)
+func rem_all_planes():
 	planes.clear()
+	object.emit_signal('update_planes', object, planes)
 
-func move_planes(source, target, planes):
-	rem_planes(source, planes)
-	add_planes(target, planes)
+func move_planes(target):
+	target.PlaneHolder.add_planes(planes)
+	rem_all_planes()
 
