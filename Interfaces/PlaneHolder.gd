@@ -8,14 +8,9 @@ func create_data(obj):
 		obj.data.planes = []
 	return obj.data.planes
 
-func add_fighter(obj):
+func add_plane(obj, plane):
 	var planes = create_data(obj)
-	planes.append({type=Game.FIGHTER})
-	obj.emit_signal('update_planes', obj, planes)
-
-func add_bomber(obj):
-	var planes = create_data(obj)
-	planes.append({type=Game.BOMBER})
+	planes.append(plane)
 	obj.emit_signal('update_planes', obj, planes)
 
 func get_planes_data(obj):

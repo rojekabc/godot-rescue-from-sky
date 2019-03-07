@@ -5,14 +5,33 @@ enum RESOURCE {MANPOWER, FOOD, ARMY, AIRPLANE}
 enum PLANE{FIGHTER, BOMBER}
 
 var timetick = 0
+var AirPlane = preload('res://Objects/AirPlane.gd')
 
-const CONFIGURATION = {
-		verbose = false,
+const TEST_CONFIGURATION = {
+		verbose = true,
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		squadSpeed = 60,
 		airportFighterLimit = 100,
-		airportBomberLimit = 100
+		airportBomberLimit = 100,
+		squadStructureBombardHitPoints = 20,
+		squadTransportBombardDestoryChance = 100,
+		squadFighterHitPoints = 60,
+		squadBomberHitPoints = 5
 	}
+
+const GAME_CONFIGURATION = {
+		verbose = false,
+		transportSpeed = 10, # number of units (unit is a distance between structures) per second
+		squadSpeed = 30,
+		airportFighterLimit = 100,
+		airportBomberLimit = 100,
+		squadStructureBombardHitPoints = 20,
+		squadTransportBombardDestoryChance = 30,
+		squadFighterHitPoints = 30,
+		squadBomberHitPoints = 5
+	}
+
+var CONFIGURATION = TEST_CONFIGURATION
 
 const resourceDefinitions = {}
 const structureDefinitions = {}

@@ -132,8 +132,8 @@ func _map_create():
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
 			if structure.type == Game.AIRPORT:
-				PlaneHolder.add_bomber(structure)
-				PlaneHolder.add_fighter(structure)
+				PlaneHolder.add_plane(structure, _airplane_create(ownerIdx, Game.FIGHTER))
+				PlaneHolder.add_plane(structure, _airplane_create(ownerIdx, Game.BOMBER))
 			while not _find_structures_at(structure.get_corners()).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx)
@@ -245,20 +245,8 @@ func _calculate_squad_tween(squad, target):
 func _tween_completed(object, key):
 	if object.is_in_group(\"Transport\"):
 		object.complete()
-		$Tween.remove(object, key)
+		# $Tween.remove(object, key)
 	elif object.is_in_group(\"Squad\"):
-		# if object.position == object.source.position:
-		#	# try to land (if airport is still on squad side)
-		#	$Tween.remove(object, key)
-		#	object.queue_free()
-		#	pass
-		#if object.position == object.target.position:
-		#	# squad reached target - TODO: action - attack/land etc.
-		#	$Tween.remove(object, key)
-		#	object.target = object.source
-		#	_calculate_squad_tween(object, object.target)
-		#else:
-			# recalculate next squad move
 		$Tween.remove(object, key)
 		_calculate_squad_tween(object, object.target)
 	pass
@@ -266,6 +254,7 @@ func _tween_completed(object, key):
 func _transport_create(sourceStructure, targetStructure, transportedResource):
 	var transport = $Map/Templates/Trasnport.duplicate()
 	transport.setup(sourceStructure, targetStructure, transportedResource)
+	Destructable.assign(transport)
 	return transport
 
 func _structure_create(ownerIdx, type):
@@ -275,7 +264,14 @@ func _structure_create(ownerIdx, type):
 	structure.ownerIdx = ownerIdx
 	structure.random_position(ownerIdx)
 	structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
+	Destructable.assign(structure)
 	return structure
+
+func _airplane_create(ownerIdx, type):
+	var airplane = Game.AirPlane.new(ownerIdx, type)
+	Destructable.assign(airplane)
+	return airplane
+
 	"
 _sections_unfolded = [ "Resource" ]
 
@@ -353,6 +349,11 @@ func consumed_resource_wait(resource):
 	var consumedResource = consumes[resource]
 	consumedResource.wait = true
 
+func consumed_resource_reject(resource):
+	var consumedResource = consumes[resource]
+	consumedResource.wait = false
+	consumedResource.has = false
+
 func consumed_resource_may_send(resource):
 	var consumedResource = consumes[resource]
 	return not (consumedResource.has or consumedResource.wait)
@@ -429,18 +430,19 @@ func _timeout():
 func _Airport_timeout():
 	if not consumes[Game.AIRPLANE].has:
 		return
-	var assignPlaneCalls = []
+	var assignPlaneType = []
 	var planeCount = _Airport_count_planes()
 	
 	if planeCount[Game.FIGHTER] < Game.CONFIGURATION.airportFighterLimit:
-		assignPlaneCalls.append('add_fighter')
+		assignPlaneType.append(Game.FIGHTER)
 	if planeCount[Game.BOMBER] < Game.CONFIGURATION.airportBomberLimit:
-		assignPlaneCalls.append('add_bomber')
+		assignPlaneType.append(Game.BOMBER)
 		
-	if assignPlaneCalls.empty():
+	if assignPlaneType.empty():
 		return
-		
-	PlaneHolder.call(assignPlaneCalls[randi() % assignPlaneCalls.size()], self)
+	
+	var plane = Game.getWorld()._airplane_create(ownerIdx, assignPlaneType[randi() % assignPlaneType.size()])
+	PlaneHolder.add_plane(self, plane)
 	consumes[Game.AIRPLANE].has = false
 	pass
 
@@ -511,6 +513,7 @@ var target
 var resource
 var ownerIdx
 
+var data = {}
 #### BEGIN Targeting ####
 var targeting = []
 #### --- END --- ####
@@ -529,18 +532,32 @@ func _ready():
 func get_name():
 	return Game.playerDefinitions[source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name
 
-func complete():
-	target.consumed_resource_put(resource)
+# destroy after hit
+func destroy():
+	# Resource won't go to the target - inform it
+	target.consumed_resource_reject(resource)
+	# clean up the object
+	clean_up()
+
+# clean up the object
+func clean_up():
+	# back to source - no more target exists
 	for targetby in targeting:
-		# back to source - no more target exists
 		targetby.target = targetby.source
+	
+	# remove the object		
+	Game.getWorld().get_node('Tween').remove(self, 'position')
+	queue_free()
+
+func complete():
 	Game.verbose(\"Transport completed from \"
 			+ Game.playerDefinitions[source.ownerIdx].name
 			+ \".\" + Game.structureDefinitions[source.type].name
 			+ \" send \" + Game.resourceDefinitions[resource].name
 			+ \" to \" + Game.playerDefinitions[target.ownerIdx].name
 			+ \".\" + Game.structureDefinitions[target.type].name)
-	queue_free()
+	target.consumed_resource_put(resource)
+	clean_up()
 	pass
 "
 _sections_unfolded = [ "Resource" ]
@@ -588,16 +605,84 @@ func _ready():
 	connect('area_entered', self, '_body_entered')
 	pass
 
+func clean():
+	target.targeting.erase(self)
+	for targetBy in targeting:
+		targetBy.target = targetBy.source
+	queue_free()
+
 func catch_target():
 	if target == source:
 		PlaneHolder.add_planes(source, PlaneHolder.get_planes_data(self))
 		PlaneHolder.rem_all_planes(self)
-		print('Landing')
-		queue_free()
+		Game.verbose('Squad landing')
+		clean()
 	else:
-		print('Attack')
+		# Remove from targeting elements
+		target.targeting.erase(self)
+		# Attak the target
+		attack_target()
+		# Back to airport
 		target = source
 	pass
+
+func attack_target():
+	if target.is_in_group('Structure'):
+		attack_structure()
+	elif target.is_in_group('Transport'):
+		attack_transport()
+	elif target.is_in_group('Squad'):
+		attack_squad()
+
+func attack_structure():
+	var planes = PlaneHolder.get_planes_data(self)
+	for plane in planes:
+		if plane.type == Game.BOMBER:
+			Destructable.hit(target, Game.CONFIGURATION.squadStructureBombardHitPoints)
+
+func attack_transport():
+	var planes = PlaneHolder.get_planes_data(self)
+	for plane in planes:
+		if can_bombard_transport(plane):
+			Destructable.hit(target, 100)
+
+func can_bombard_transport(plane):
+	return plane.type == Game.BOMBER and (randi() % 100 <= Game.CONFIGURATION.squadTransportBombardDestoryChance)
+
+func attack_squad():
+	var squadPlanes = PlaneHolder.get_planes_data(self)
+	var targetPlanes = PlaneHolder.get_planes_data(target)
+	
+	# Algorithm - hit random from oposite side
+	attack_planes(squadPlanes, targetPlanes)
+	attack_planes(targetPlanes, squadPlanes)
+	# destroy planes, which has 0 hit points
+	remove_destroyed_planes(squadPlanes)
+	remove_destroyed_planes(targetPlanes)
+	# validate squads
+	if squadPlanes.empty():
+		clean()
+	if targetPlanes.empty():
+		target.clean()
+
+func remove_destroyed_planes(squadPlanes):
+	var destroyed = []
+	for plane in squadPlanes:
+		if Destructable.is_destroyed(plane):
+			destroyed.append(plane)
+	for plane in destroyed:
+		squadPlanes.erase(plane)
+
+func attack_planes(squadPlanes, targetPlanes):
+	for plane in squadPlanes:
+		var targetPlane = targetPlanes[randi() % targetPlanes.size()]
+		var hitPoints
+		if plane.type == Game.BOMBER:
+			hitPoints = Game.CONFIGURATION.squadBomberHitPoints
+		elif plane.type == Game.FIGHTER:
+			hitPoints = Game.CONFIGURATION.squadFighterHitPoints
+		Destructable.hit(targetPlane, hitPoints)
+	
 
 func _body_entered(body):
 	if target == body:
@@ -706,6 +791,8 @@ func set_airport(airport):
 	if self.airport == airport:
 		return _detach_airport_view()
 	else:
+		# if self.airport != null:
+		#	_detach_airport_view()
 		_attach_airport_view(airport)
 	append_planes(self.airport.data.planes)
 	pass
