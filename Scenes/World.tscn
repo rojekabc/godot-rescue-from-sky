@@ -753,10 +753,10 @@ func _list_selected_planes():
 	return result
 
 func update_planes():
-	var planes = airport.data.planes.duplicate()
+	var planes = airport.PlaneHolder.planes.duplicate()
 	for child in $Container/Columns/Planes/Container.get_children():
 		var uiplane = child.get_meta('plane')
-		if airport.data.planes.has(uiplane):
+		if airport.PlaneHolder.planes.has(uiplane):
 			planes.erase(uiplane)
 		else:
 			$Container/Columns/Planes/Container.remove_child(child)
