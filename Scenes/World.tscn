@@ -1,11 +1,11 @@
 [gd_scene load_steps=22 format=2]
 
-[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
-[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=2]
-[ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=3]
-[ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=4]
-[ext_resource path="res://Resources/TitleFont.tres" type="DynamicFont" id=5]
-[ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=6]
+[ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=1]
+[ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=2]
+[ext_resource path="res://Resources/TitleFont.tres" type="DynamicFont" id=3]
+[ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=4]
+[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=5]
+[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=6]
 
 [sub_resource type="GDScript" id=1]
 
@@ -46,6 +46,8 @@ func _input(event):
 	if event is InputEventMouseButton and event.is_pressed() and event.button_index == BUTTON_LEFT:
 		if selectTarget:
 			_select_target_action(event.global_position)
+		elif $Map/UI/Suqad.visible:
+			return
 		else:
 			var strPressed = _find_structure_at(event.global_position)
 			if strPressed:
@@ -143,11 +145,11 @@ func _map_create():
 # Create consumer-suplier network
 func _create_resource_network():
 	for structure in $Map/Structures.get_children():
-		for consume in structure.consumes:
+		for consume in structure.Consumer.list():
 			var suppliers = _find_producers_of(structure.ownerIdx, consume)
 			var supplier = _find_best_supplier(structure, suppliers)
 			if supplier:
-				structure.consumes[consume].supplier = supplier
+				structure.set_suplier(consume, supplier)
 				supplier.register_consumer(consume, structure)
 
 func _find_best_supplier(structure, suppliers):
@@ -169,7 +171,7 @@ func _find_producers_of(ownerIdx, resource):
 	for structure in $Map/Structures.get_children():
 		if structure.ownerIdx != ownerIdx:
 			continue
-		if structure.produces.has(resource):
+		if structure.Producer.is_producing(resource):
 			result.append(structure)
 	return result
 
@@ -218,7 +220,8 @@ func transport_start(sourceStructure, targetStructure, transportedResource):
 	$Tween.interpolate_property(
 		transport, \"position\",
 		sourceStructure.position, targetStructure.position,
-		distance/Game.CONFIGURATION.transportSpeed, Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+		distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
+		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
 
 func _calculate_squad_tween(squad, target):
 	var targetVector = target.position - squad.position
@@ -226,14 +229,16 @@ func _calculate_squad_tween(squad, target):
 	var targetDirection = targetVector.normalized()
 	var time
 	var targetPosition
-	if distance > Game.CONFIGURATION.squadSpeed:
+	var squadSpeed = squad.get_speed()
+	
+	if distance > squadSpeed:
 		time = $Timer.wait_time
-		targetPosition = squad.position + targetDirection*Game.CONFIGURATION.squadSpeed
+		targetPosition = squad.position + targetDirection*squadSpeed
 	# elif distance < 10:
 	#	# It's very close - the action can be started
 	#	pass
 	else:
-		time = $Timer.wait_time * distance / Game.CONFIGURATION.squadSpeed
+		time = $Timer.wait_time * distance / squadSpeed
 		targetPosition = squad.Moveable.target.position
 	$Tween.interpolate_property(squad, \"position\",
 		squad.position, targetPosition,
@@ -271,6 +276,139 @@ func _airplane_create(ownerIdx, type):
 	"
 _sections_unfolded = [ "Resource" ]
 
+[sub_resource type="GDScript" id=14]
+
+resource_name = "UISquad"
+script/source = "extends PanelContainer
+
+var airport = null
+
+func _ready():
+	$Container/Columns/Actions/Target.connect('pressed', self, '_target_pressed')
+	$Container/Title.connect('gui_input', self, '_title_gui_input')
+	pass
+
+func _title_gui_input(event):
+	if event is InputEventMouseButton and event.is_pressed():
+		$Container/Title.accept_event()
+		clear_planes()
+		_detach_airport_view()
+
+func _target_pressed():
+	var planes = _list_selected_planes()
+	if planes.empty():
+		Game.getWorld()._info('Select any plane')
+		return
+	Game.getWorld().select_target(airport, planes)
+	_detach_airport_view()
+	pass
+
+func _detach_airport_view():
+	airport.disconnect('update_planes', self, '_sig_update_planes')
+	hide()
+	airport = null
+	return 0
+
+func _attach_airport_view(airport):
+	show()
+	self.airport = airport
+	airport.connect('update_planes', self, '_sig_update_planes')
+	return 0
+
+func _sig_update_planes(object, planes):
+	update_planes()
+	pass
+
+func _list_selected_planes():
+	var result = []
+	for checkbox in $Container/Columns/Planes/Container.get_children():
+		if checkbox.pressed:
+			result.append(checkbox.get_meta('plane'))
+	return result
+
+func update_planes():
+	if airport == null:
+		return
+	var planes = airport.PlaneHolder.planes.duplicate()
+	for child in $Container/Columns/Planes/Container.get_children():
+		var uiplane = child.get_meta('plane')
+		if airport.PlaneHolder.planes.has(uiplane):
+			planes.erase(uiplane)
+		else:
+			$Container/Columns/Planes/Container.remove_child(child)
+			child.queue_free()
+	for plane in planes:
+		append_plane(plane)
+
+func clear_planes():
+	for child in $Container/Columns/Planes/Container.get_children():
+		$Container/Columns/Planes/Container.remove_child(child)
+		child.queue_free()
+
+func append_plane(plane):
+	var checkbox = CheckBox.new()
+	if plane.type == Game.FIGHTER:
+		checkbox.text = 'Fighter'
+	else:
+		checkbox.text = 'Bomber'
+	checkbox.set_meta('plane', plane)
+	$Container/Columns/Planes/Container.add_child(checkbox)
+
+func append_planes(planesData):
+	for plane in planesData:
+		append_plane(plane)
+
+func set_airport(airport):
+	clear_planes()
+	if self.airport == airport:
+		return _detach_airport_view()
+	else:
+		if self.airport != null:
+			_detach_airport_view()
+		_attach_airport_view(airport)
+	append_planes(self.airport.PlaneHolder.planes)
+	pass
+"
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="GDScript" id=15]
+
+script/source = "extends Label
+
+var startTick
+
+const STATUS_COLOR = Color(1, 1, 1, 0.6)
+const INFO_COLOR = Color(0, 1, 1, 0.6)
+const FAIL_COLOR = Color(1, 0, 0, 0.6)
+
+func _ready():
+	Game.getTimer().connect('timeout', self, '_timeout')
+	pass
+	
+func _timeout():
+	if visible and Game.timetick > startTick + 2:
+		visible = false
+	pass
+
+func _status(msg, color):
+	text = msg
+	modulate = color
+	visible = true
+	startTick = Game.timetick
+	
+
+func status(msg):
+	_status(msg, STATUS_COLOR)
+	pass
+
+func info(msg):
+	_status(msg, INFO_COLOR)
+
+func fail(msg):
+	_status(msg, FAIL_COLOR)
+"
+_sections_unfolded = [ "Resource" ]
+
 [sub_resource type="GDScript" id=2]
 
 resource_name = "Structure"
@@ -283,12 +421,14 @@ const FULL_SIZE = 60
 var type
 var ownerIdx
 
-var consumes = {}
-var produces = {}
+# var consumes = {}
+# var produces = {}
 
 var PlaneHolder
 var Destructable
 var Targetable
+var Consumer
+var Producer
 
 # The information about planes is updated
 signal update_planes(object, planesData)
@@ -296,16 +436,18 @@ signal update_planes(object, planesData)
 func _init():
 	Destructable = Game.Destructable.new(self)
 	Targetable = Game.Targetable.new(self)
+	Consumer = Game.Consumer.new(self)
+	Producer = Game.Producer.new(self)
 
 func _Airport_create_data():
 	PlaneHolder = Game.PlaneHolder.new(self)
 
 # Register consumer, which will receive produced resource
 func register_consumer(resource, consumer):
-	if produces.has(resource):
-		var produce = produces[resource]
-		produce.consumers.append(consumer)
-	pass
+	Producer.add_consumer(resource, consumer)
+
+func set_suplier(resource, suplier):
+	Consumer.set_suplier(resource, suplier)
 
 func random_position(ownerIdx):
 	position.x = HALF_SIZE + Game.MAP_WIDTH/2*ownerIdx + randi() % (Game.MAP_WIDTH/2 - FULL_SIZE)
@@ -318,9 +460,9 @@ func assign_type(strType, timer):
 	$Acronym.text = strDef.acronym
 	timer.connect('timeout', self, '_timeout')
 	for resource in strDef.consumes:
-		_consumed_resource_add(resource)
+		Consumer.add(resource)
 	for resource in strDef.produces:
-		_produced_resource_add(resource)
+		Producer.add_resource(resource)
 	_call_type_function('create_data')
 
 func get_type():
@@ -340,77 +482,6 @@ func get_corners():
 	result.append(Vector2(position.x+HALF_SIZE, position.y+HALF_SIZE))
 	return result
 
-func consumed_resource_put(resource):
-	var consumedResource = consumes[resource]
-	consumedResource.has = true
-	consumedResource.wait = false
-
-func consumed_resource_wait(resource):
-	var consumedResource = consumes[resource]
-	consumedResource.wait = true
-
-func consumed_resource_reject(resource):
-	var consumedResource = consumes[resource]
-	consumedResource.wait = false
-	consumedResource.has = false
-
-func consumed_resource_may_send(resource):
-	var consumedResource = consumes[resource]
-	return not (consumedResource.has or consumedResource.wait)
-
-func _produced_resource_distribute(produce):
-	for consumer in produce.consumers:
-		if not consumer.consumed_resource_may_send(produce.resource):
-			continue
-		Game.verbose(
-			get_name()
-			+ \" send \" + Game.resourceDefinitions[produce.resource].name
-			+ \" to \" + consumer.get_name())
-		var transport = Game.getWorld().transport_start(self, consumer, produce.resource)
-		produce.has = false
-		consumer.consumed_resource_wait(produce.resource)
-		break
-
-func _produced_resource_produce_tick(produce):
-	produce.timeout -= 1
-	if produce.timeout == 0:
-		produce.has = true
-		produce.producing = false
-		Game.verbose(
-			get_name()
-			+ \" produced \" + Game.resourceDefinitions[produce.resource].name)
-	pass
-
-# check that has resources to start produce
-func _produced_resource_has_resources(produce):
-	var result = true
-	var resDef = Game.resourceDefinitions[produce.resource]
-	for consumedResource in resDef.consumes:
-		if not consumes[consumedResource].has:
-			result = false
-	return result
-
-func _produced_resource_start_production(produce):
-	# consume resources
-	var resDef = Game.resourceDefinitions[produce.resource]
-	for consumedResource in resDef.consumes:
-		consumes[consumedResource].has = false
-	# start produce
-	produce.producing = true
-	produce.timeout = resDef.timeout
-	Game.verbose(
-		get_name()
-		 + \" start production of \" + Game.resourceDefinitions[produce.resource].name)
-
-func _produced_resource_timeout(produce):
-	if produce.has:
-		_produced_resource_distribute(produce)
-	elif produce.producing:
-		_produced_resource_produce_tick(produce)
-	elif _produced_resource_has_resources(produce):
-		_produced_resource_start_production(produce)
-	pass
-
 func _call_type_function(function, args=null):
 	var strName = Game.structureDefinitions[type].name
 	var callName = '_' + strName + '_' + function
@@ -423,12 +494,12 @@ func pressed(world):
 	pass
 
 func _timeout():
-	for produce in produces.values(): _produced_resource_timeout(produce)
+	Producer.timeout()
 	_call_type_function('timeout')
 	pass
 
 func _Airport_timeout():
-	if not consumes[Game.AIRPLANE].has:
+	if not Consumer.has(Game.AIRPLANE):
 		return
 	var assignPlaneType = []
 	var planeCount = _Airport_count_planes()
@@ -442,15 +513,14 @@ func _Airport_timeout():
 		return
 	
 	var plane = Game.getWorld()._airplane_create(ownerIdx, assignPlaneType[randi() % assignPlaneType.size()])
-	PlaneHolder.add_plane(self, plane)
-	consumes[Game.AIRPLANE].has = false
+	PlaneHolder.add_plane(plane)
+	Consumer.consume(Game.AIRPLANE)
 	pass
 
 func _Airport_count_planes():
 	var fighterCount = 0
 	var bomberCount = 0
-	var planes = PlaneHolder.get_planes_data(self)
-	for plane in planes:
+	for plane in PlaneHolder.planes:
 		if plane.type == Game.FIGHTER: fighterCount += 1
 		if plane.type == Game.BOMBER: bomberCount += 1
 	return {
@@ -461,32 +531,13 @@ func _Airport_count_planes():
 func _Airport_pressed(world):
 	world.ui_squad_panel(self)
 
-func _consumed_resource_add(resource):
-	consumes[resource] = {
-		resource = resource,
-		has = false,
-		supplier = null,
-		# transport start, waiting for resource
-		wait = false
-	}
-
-func _produced_resource_add(resource):
-	var resourceDefinition = Game.resourceDefinitions[resource]
-	produces[resource] = {
-		resource = resource,
-		producing = false,
-		has = false,
-		timeout = resourceDefinition.timeout,
-		consumers = [],
-		lastConsumer = null
-	}
 "
 _sections_unfolded = [ "Resource" ]
 
 [sub_resource type="ShaderMaterial" id=3]
 
 render_priority = 0
-shader = ExtResource( 1 )
+shader = ExtResource( 5 )
 shader_param/color = Plane( 0, 0, 0, 1 )
 _sections_unfolded = [ "shader_param" ]
 
@@ -522,6 +573,7 @@ func _init():
 
 func setup(sourceStructure, targetStructure, transportedResource):
 	Moveable.assign(sourceStructure, targetStructure)
+	Destructable.assign()
 	resource = transportedResource
 	ownerIdx = sourceStructure.ownerIdx
 	$Acronym.text = Game.resourceDefinitions[resource].acronym
@@ -536,7 +588,7 @@ func get_name():
 # destroy after hit
 func destroy():
 	# Resource won't go to the target - inform it
-	Moveable.target.consumed_resource_reject(resource)
+	Moveable.target.Consumer.clear(resource)
 	# clean up the object
 	clean_up()
 
@@ -554,7 +606,7 @@ func complete():
 			+ \" send \" + Game.resourceDefinitions[resource].name
 			+ \" to \" + Game.playerDefinitions[Moveable.target.ownerIdx].name
 			+ \".\" + Game.structureDefinitions[Moveable.target.type].name)
-	Moveable.target.consumed_resource_put(resource)
+	Moveable.target.Consumer.put(resource)
 	clean_up()
 	pass
 "
@@ -563,7 +615,7 @@ _sections_unfolded = [ "Resource" ]
 [sub_resource type="ShaderMaterial" id=7]
 
 render_priority = 0
-shader = ExtResource( 1 )
+shader = ExtResource( 5 )
 shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
 _sections_unfolded = [ "shader_param" ]
 
@@ -586,15 +638,13 @@ resource_name = "Squad"
 script/source = "extends Area2D
 
 var ownerIdx
+var type
 
 var Moveable
 var Targetable
 var PlaneHolder
 
-### BEGIN Plane holder ###
-# The information about planes is updated
 signal update_planes(object, planesData)
-### END Plane Holder ###
 
 func _ready():
 	# structures
@@ -607,6 +657,15 @@ func _init():
 	Moveable = Game.Moveable.new(self)
 	Targetable = Game.Targetable.new(self)
 	PlaneHolder = Game.PlaneHolder.new(self)
+	connect('update_planes', self, '_update_planes')
+
+func _update_planes(object, planesData):
+	type = Game.FIGHTER
+	for plane in planesData:
+		if plane.type == Game.BOMBER:
+			type = Game.BOMBER
+			break
+	pass
 
 func clean():
 	Moveable.stop_targeting()
@@ -678,7 +737,15 @@ func attack_planes(squadPlanes, targetPlanes):
 		elif plane.type == Game.FIGHTER:
 			hitPoints = Game.CONFIGURATION.squadFighterHitPoints
 		targetPlane.Destructable.hit(hitPoints)
-	
+
+func get_type():
+	return type
+
+func get_speed():
+	if type == Game.FIGHTER:
+		return Game.CONFIGURATION.fighterSquadSpeed
+	else:
+		return Game.CONFIGURATION.bomberSquadSpeed
 
 func _body_entered(body):
 	if Moveable.target == body:
@@ -692,7 +759,7 @@ _sections_unfolded = [ "Resource" ]
 [sub_resource type="ShaderMaterial" id=11]
 
 render_priority = 0
-shader = ExtResource( 1 )
+shader = ExtResource( 5 )
 shader_param/color = Plane( 0.8, 0, 0, 0.6 )
 _sections_unfolded = [ "shader_param" ]
 
@@ -709,130 +776,6 @@ size = Vector2( 30, 30 )
 custom_solver_bias = 0.0
 extents = Vector2( 15, 15 )
 
-[sub_resource type="GDScript" id=14]
-
-resource_name = "UISquad"
-script/source = "extends PanelContainer
-
-var airport = null
-
-func _ready():
-	$Container/Columns/Actions/Target.connect('pressed', self, '_target_pressed')
-	pass
-
-func _target_pressed():
-	var planes = _list_selected_planes()
-	if planes.empty():
-		Game.getWorld()._info('Select any plane')
-		return
-	Game.getWorld().select_target(airport, planes)
-	_detach_airport_view()
-	pass
-
-func _detach_airport_view():
-	airport.disconnect('update_planes', self, '_sig_update_planes')
-	hide()
-	airport = null
-	return 0
-
-func _attach_airport_view(airport):
-	show()
-	self.airport = airport
-	airport.connect('update_planes', self, '_sig_update_planes')
-	return 0
-
-func _sig_update_planes(object, planes):
-	update_planes()
-	pass
-
-func _list_selected_planes():
-	var result = []
-	for checkbox in $Container/Columns/Planes/Container.get_children():
-		if checkbox.pressed:
-			result.append(checkbox.get_meta('plane'))
-	return result
-
-func update_planes():
-	var planes = airport.PlaneHolder.planes.duplicate()
-	for child in $Container/Columns/Planes/Container.get_children():
-		var uiplane = child.get_meta('plane')
-		if airport.PlaneHolder.planes.has(uiplane):
-			planes.erase(uiplane)
-		else:
-			$Container/Columns/Planes/Container.remove_child(child)
-			child.queue_free()
-	for plane in planes:
-		append_plane(plane)
-
-func clear_planes():
-	for child in $Container/Columns/Planes/Container.get_children():
-		$Container/Columns/Planes/Container.remove_child(child)
-		child.queue_free()
-
-func append_plane(plane):
-	var checkbox = CheckBox.new()
-	if plane.type == Game.FIGHTER:
-		checkbox.text = 'Fighter'
-	else:
-		checkbox.text = 'Bomber'
-	checkbox.set_meta('plane', plane)
-	$Container/Columns/Planes/Container.add_child(checkbox)
-
-func append_planes(planesData):
-	for plane in planesData:
-		append_plane(plane)
-
-func set_airport(airport):
-	clear_planes()
-	if self.airport == airport:
-		return _detach_airport_view()
-	else:
-		# if self.airport != null:
-		#	_detach_airport_view()
-		_attach_airport_view(airport)
-	append_planes(self.airport.PlaneHolder.planes)
-	pass
-"
-_sections_unfolded = [ "Resource" ]
-
-[sub_resource type="GDScript" id=15]
-
-script/source = "extends Label
-
-var startTick
-
-const STATUS_COLOR = Color(1, 1, 1, 0.6)
-const INFO_COLOR = Color(0, 1, 1, 0.6)
-const FAIL_COLOR = Color(1, 0, 0, 0.6)
-
-func _ready():
-	Game.getTimer().connect('timeout', self, '_timeout')
-	pass
-	
-func _timeout():
-	if visible and Game.timetick > startTick + 2:
-		visible = false
-	pass
-
-func _status(msg, color):
-	text = msg
-	modulate = color
-	visible = true
-	startTick = Game.timetick
-	
-
-func status(msg):
-	_status(msg, STATUS_COLOR)
-	pass
-
-func info(msg):
-	_status(msg, INFO_COLOR)
-
-func fail(msg):
-	_status(msg, FAIL_COLOR)
-"
-_sections_unfolded = [ "Resource" ]
-
 [node name="World" type="Node2D" index="0"]
 
 script = SubResource( 1 )
@@ -845,136 +788,7 @@ script = SubResource( 1 )
 
 [node name="Transports" type="Node" parent="Map" index="2"]
 
-[node name="Templates" type="Node" parent="Map" index="3"]
-
-[node name="Structure" type="Area2D" parent="Map/Templates" index="0" groups=[
-"Structure",
-]]
-
-editor/display_folded = true
-position = Vector2( 68.0187, 77.5413 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-collision_mask = 0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 2 )
-_sections_unfolded = [ "Collision", "Material", "Transform" ]
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
-
-material = SubResource( 3 )
-texture = SubResource( 4 )
-_sections_unfolded = [ "Material", "Region", "Transform" ]
-
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
-
-shape = SubResource( 5 )
-_sections_unfolded = [ "Transform" ]
-
-[node name="Acronym" type="Label" parent="Map/Templates/Structure" index="2"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-margin_right = 29.0
-margin_bottom = 32.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 2
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 4
-custom_fonts/font = ExtResource( 2 )
-text = "C"
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
-_sections_unfolded = [ "custom_fonts" ]
-
-[node name="Trasnport" type="Area2D" parent="Map/Templates" index="1" groups=[
-"Transport",
-]]
-
-editor/display_folded = true
-position = Vector2( 199.009, 84.3346 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-collision_mask = 0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 6 )
-_sections_unfolded = [ "Collision", "Material", "Pause", "Transform" ]
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
-
-material = SubResource( 7 )
-texture = SubResource( 8 )
-_sections_unfolded = [ "Material" ]
-
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
-
-shape = SubResource( 9 )
-
-[node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-margin_left = -15.0
-margin_top = -14.0
-margin_right = 16.0
-margin_bottom = 18.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 2
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 4
-custom_fonts/font = ExtResource( 2 )
-text = "X"
-align = 1
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
-_sections_unfolded = [ "custom_fonts" ]
-
-[node name="Squad" type="Area2D" parent="Map/Templates" index="2" groups=[
-"Squad",
-]]
-
-editor/display_folded = true
-position = Vector2( 349.767, 72.1741 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 10 )
-_sections_unfolded = [ "Collision" ]
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Squad" index="0"]
-
-material = SubResource( 11 )
-texture = SubResource( 12 )
-_sections_unfolded = [ "Material" ]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Map/Templates/Squad" index="1"]
-
-visible = false
-shape = SubResource( 13 )
-
-[node name="UI" type="Container" parent="Map" index="4"]
+[node name="UI" type="Container" parent="Map" index="3"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -1006,7 +820,7 @@ mouse_filter = 0
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 1
-custom_styles/panel = ExtResource( 3 )
+custom_styles/panel = ExtResource( 1 )
 script = SubResource( 14 )
 _sections_unfolded = [ "Visibility", "custom_styles" ]
 __meta__ = {
@@ -1041,18 +855,18 @@ margin_right = 246.0
 margin_bottom = 45.0
 rect_pivot_offset = Vector2( 0, 0 )
 rect_clip_content = false
-mouse_filter = 2
+mouse_filter = 1
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 4
-custom_styles/normal = ExtResource( 4 )
-custom_fonts/font = ExtResource( 5 )
+custom_styles/normal = ExtResource( 2 )
+custom_fonts/font = ExtResource( 3 )
 text = "Squad"
 align = 1
 percent_visible = 1.0
 lines_skipped = 0
 max_lines_visible = -1
-_sections_unfolded = [ "custom_fonts", "custom_styles" ]
+_sections_unfolded = [ "Mouse", "custom_fonts", "custom_styles" ]
 
 [node name="Columns" type="HBoxContainer" parent="Map/UI/Suqad/Container" index="1"]
 
@@ -1141,7 +955,7 @@ mouse_filter = 0
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 1
-custom_fonts/font = ExtResource( 6 )
+custom_fonts/font = ExtResource( 4 )
 toggle_mode = false
 enabled_focus_mode = 2
 shortcut = null
@@ -1167,7 +981,7 @@ mouse_filter = 0
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 1
-custom_fonts/font = ExtResource( 6 )
+custom_fonts/font = ExtResource( 4 )
 toggle_mode = false
 enabled_focus_mode = 2
 shortcut = null
@@ -1191,7 +1005,7 @@ mouse_filter = 2
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 3
 size_flags_vertical = 4
-custom_fonts/font = ExtResource( 6 )
+custom_fonts/font = ExtResource( 4 )
 text = "Status message"
 align = 1
 percent_visible = 1.0
@@ -1200,10 +1014,139 @@ max_lines_visible = -1
 script = SubResource( 15 )
 _sections_unfolded = [ "Anchor", "Margin", "Rect", "Size Flags", "Visibility", "custom_fonts" ]
 
+[node name="Templates" type="Node" parent="Map" index="4"]
+
+[node name="Structure" type="Area2D" parent="Map/Templates" index="0" groups=[
+"Structure",
+]]
+
+editor/display_folded = true
+position = Vector2( 68.0187, 77.5413 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+collision_mask = 0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 2 )
+_sections_unfolded = [ "Collision", "Material", "Transform" ]
+
+[node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
+
+material = SubResource( 3 )
+texture = SubResource( 4 )
+_sections_unfolded = [ "Material", "Region", "Transform" ]
+
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
+
+shape = SubResource( 5 )
+_sections_unfolded = [ "Transform" ]
+
+[node name="Acronym" type="Label" parent="Map/Templates/Structure" index="2"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 29.0
+margin_bottom = 32.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 2
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 4
+custom_fonts/font = ExtResource( 6 )
+text = "C"
+percent_visible = 1.0
+lines_skipped = 0
+max_lines_visible = -1
+_sections_unfolded = [ "custom_fonts" ]
+
+[node name="Trasnport" type="Area2D" parent="Map/Templates" index="1" groups=[
+"Transport",
+]]
+
+editor/display_folded = true
+position = Vector2( 199.009, 84.3346 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+collision_mask = 0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 6 )
+_sections_unfolded = [ "Collision", "Material", "Pause", "Transform" ]
+
+[node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
+
+material = SubResource( 7 )
+texture = SubResource( 8 )
+_sections_unfolded = [ "Material" ]
+
+[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
+
+shape = SubResource( 9 )
+
+[node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = -15.0
+margin_top = -14.0
+margin_right = 16.0
+margin_bottom = 18.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 2
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 4
+custom_fonts/font = ExtResource( 6 )
+text = "X"
+align = 1
+percent_visible = 1.0
+lines_skipped = 0
+max_lines_visible = -1
+_sections_unfolded = [ "custom_fonts" ]
+
+[node name="Squad" type="Area2D" parent="Map/Templates" index="2" groups=[
+"Squad",
+]]
+
+editor/display_folded = true
+position = Vector2( 349.767, 72.1741 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 10 )
+_sections_unfolded = [ "Collision" ]
+
+[node name="Sprite" type="Sprite" parent="Map/Templates/Squad" index="0"]
+
+material = SubResource( 11 )
+texture = SubResource( 12 )
+_sections_unfolded = [ "Material" ]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Map/Templates/Squad" index="1"]
+
+visible = false
+shape = SubResource( 13 )
+
 [node name="Timer" type="Timer" parent="." index="1"]
 
 process_mode = 1
-wait_time = 1.0
+wait_time = 5.0
 one_shot = false
 autostart = true
 

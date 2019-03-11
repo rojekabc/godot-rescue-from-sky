@@ -12,11 +12,14 @@ var Targetable = preload('res://Interfaces/Targetable.gd')
 var Moveable = preload('res://Interfaces/Moveable.gd')
 var PlaneHolder = preload('res://Interfaces/PlaneHolder.gd')
 var Destructable = preload('res://Interfaces/Destructable.gd')
+var Consumer = preload('res://Interfaces/Consumer.gd')
+var Producer = preload('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
 		verbose = true,
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
-		squadSpeed = 60,
+		fighterSquadSpeed = 90,
+		bomberSquadSpeed = 60,
 		airportFighterLimit = 100,
 		airportBomberLimit = 100,
 		squadStructureBombardHitPoints = 20,
@@ -27,8 +30,9 @@ const TEST_CONFIGURATION = {
 
 const GAME_CONFIGURATION = {
 		verbose = false,
-		transportSpeed = 10, # number of units (unit is a distance between structures) per second
-		squadSpeed = 30,
+		transportSpeed = 20, # number of units (unit is a distance between structures) per second
+		fighterSquadSpeed = 90,
+		bomberSquadSpeed = 60,
 		airportFighterLimit = 100,
 		airportBomberLimit = 100,
 		squadStructureBombardHitPoints = 20,
@@ -37,7 +41,7 @@ const GAME_CONFIGURATION = {
 		squadBomberHitPoints = 5
 	}
 
-var CONFIGURATION = TEST_CONFIGURATION
+var CONFIGURATION = GAME_CONFIGURATION
 
 const resourceDefinitions = {}
 const structureDefinitions = {}
