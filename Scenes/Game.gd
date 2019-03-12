@@ -41,7 +41,7 @@ const GAME_CONFIGURATION = {
 		squadBomberHitPoints = 5
 	}
 
-var CONFIGURATION = GAME_CONFIGURATION
+var CONFIGURATION = TEST_CONFIGURATION
 
 const resourceDefinitions = {}
 const structureDefinitions = {}
@@ -49,6 +49,16 @@ const playerDefinitions = []
 
 const MAP_WIDTH = 1024
 const MAP_HEIGHT = 600
+
+func create(temporary):
+	var result = temporary.duplicate()
+	var props = result.get_property_list()
+	for prop in props:
+		match prop.name:
+			'Moveable': result.Moveable = Moveable.new(result)
+			'Destructable': result.Destructable = Destructable.new(result)
+			'Targetable': result.Targetable = Targetable.new(result)
+	return result
 
 func verbose(msg):
 	if CONFIGURATION.verbose:

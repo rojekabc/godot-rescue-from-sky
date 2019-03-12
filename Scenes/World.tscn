@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=2]
+[gd_scene load_steps=27 format=2]
 
 [ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=1]
 [ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=2]
@@ -6,6 +6,7 @@
 [ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=4]
 [ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=5]
 [ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=6]
+[ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=7]
 
 [sub_resource type="GDScript" id=1]
 
@@ -82,6 +83,7 @@ func _select_target_action(globalPosition):
 		return _fail('Unknown mission')
 	selectTarget.target = target
 	squad_start(selectTarget.source, target, selectTarget.planes)
+	army_start(selectTarget.source, target) # TEST CALL - REMOVE
 	selectTarget = null
 
 # Find element under point. From the list the structure will be always selected as more priority.
@@ -123,6 +125,8 @@ func _prepare_materials():
 	for playerDefinition in Game.playerDefinitions:
 		playerDefinition.structureMaterial = $Map/Templates/Structure/Sprite.material.duplicate()
 		playerDefinition.structureMaterial.set('shader_param/color', playerDefinition.color)
+		playerDefinition.armyMaterial = $Map/Templates/Army/Sprite.material.duplicate()
+		playerDefinition.armyMaterial.set('shader_param/color', playerDefinition.color)
 
 func _timeout():
 	Game.timetick += 1
@@ -272,11 +276,30 @@ func _structure_create(ownerIdx, type):
 func _airplane_create(ownerIdx, type):
 	var airplane = Game.AirPlane.new(ownerIdx, type)
 	return airplane
+	
+func army_create(source, target):
+	var template = $Map/Templates/Army
+	var army = Game.create(template)
+	army.Moveable.assign(source, target)
+	army.ownerIdx = source.ownerIdx
+	army.get_node('Sprite').material = Game.playerDefinitions[army.ownerIdx].armyMaterial
+	return army
 
+func army_start(source, target):
+	var army = army_create(source, target)
+	army.visible = true
+	$Map/Armies.add_child(army)
+	var distance = (target.position - source.position).length()
+	$Tween.interpolate_property(
+		army, \"position\",
+		source.position, target.position,
+		distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
+		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+	pass
 	"
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="GDScript" id=14]
+[sub_resource type="GDScript" id=2]
 
 resource_name = "UISquad"
 script/source = "extends PanelContainer
@@ -371,7 +394,7 @@ func set_airport(airport):
 "
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="GDScript" id=15]
+[sub_resource type="GDScript" id=3]
 
 script/source = "extends Label
 
@@ -409,9 +432,8 @@ func fail(msg):
 "
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="GDScript" id=2]
+[sub_resource type="GDScript" id=4]
 
-resource_name = "Structure"
 script/source = "extends Area2D
 
 const HALF_SIZE = 30
@@ -534,14 +556,14 @@ func _Airport_pressed(world):
 "
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="ShaderMaterial" id=3]
+[sub_resource type="ShaderMaterial" id=5]
 
 render_priority = 0
 shader = ExtResource( 5 )
 shader_param/color = Plane( 0, 0, 0, 1 )
 _sections_unfolded = [ "shader_param" ]
 
-[sub_resource type="ImageTexture" id=4]
+[sub_resource type="ImageTexture" id=6]
 
 flags = 0
 storage = 0
@@ -549,14 +571,13 @@ lossy_quality = 0.7
 flags = 0
 size = Vector2( 60, 60 )
 
-[sub_resource type="RectangleShape2D" id=5]
+[sub_resource type="RectangleShape2D" id=7]
 
 custom_solver_bias = 0.0
 extents = Vector2( 20, 20 )
 
-[sub_resource type="GDScript" id=6]
+[sub_resource type="GDScript" id=8]
 
-resource_name = "Transport"
 script/source = "extends Area2D
 
 var resource
@@ -612,14 +633,14 @@ func complete():
 "
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="ShaderMaterial" id=7]
+[sub_resource type="ShaderMaterial" id=9]
 
 render_priority = 0
 shader = ExtResource( 5 )
 shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
 _sections_unfolded = [ "shader_param" ]
 
-[sub_resource type="ImageTexture" id=8]
+[sub_resource type="ImageTexture" id=10]
 
 flags = 0
 storage = 0
@@ -627,14 +648,13 @@ lossy_quality = 0.7
 flags = 0
 size = Vector2( 30, 30 )
 
-[sub_resource type="RectangleShape2D" id=9]
+[sub_resource type="RectangleShape2D" id=11]
 
 custom_solver_bias = 0.0
 extents = Vector2( 15, 15 )
 
-[sub_resource type="GDScript" id=10]
+[sub_resource type="GDScript" id=12]
 
-resource_name = "Squad"
 script/source = "extends Area2D
 
 var ownerIdx
@@ -756,14 +776,14 @@ func _body_entered(body):
 "
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="ShaderMaterial" id=11]
+[sub_resource type="ShaderMaterial" id=13]
 
 render_priority = 0
 shader = ExtResource( 5 )
 shader_param/color = Plane( 0.8, 0, 0, 0.6 )
 _sections_unfolded = [ "shader_param" ]
 
-[sub_resource type="ImageTexture" id=12]
+[sub_resource type="ImageTexture" id=14]
 
 flags = 7
 storage = 0
@@ -771,10 +791,52 @@ lossy_quality = 0.7
 flags = 7
 size = Vector2( 30, 30 )
 
-[sub_resource type="RectangleShape2D" id=13]
+[sub_resource type="RectangleShape2D" id=15]
 
 custom_solver_bias = 0.0
 extents = Vector2( 15, 15 )
+
+[sub_resource type="GDScript" id=16]
+
+resource_name = "Army"
+script/source = "extends Area2D
+
+var Moveable
+var Destuctable
+var Tatgetable
+var ownerIdx
+
+func _ready():
+	pass
+
+func get_name():
+	return Game.playerDefinitions[ownerIdx].name + \".army\""
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="ShaderMaterial" id=17]
+
+render_priority = 0
+shader = ExtResource( 7 )
+shader_param/color = Plane( 1, 0, 0, 1 )
+shader_param/size = 0.5
+shader_param/borderSize = 0.08
+shader_param/borderColor = Plane( 1, 1, 1, 1 )
+shader_param/secondBorderSize = 0.0
+shader_param/secondBorderColor = null
+_sections_unfolded = [ "shader_param" ]
+
+[sub_resource type="ImageTexture" id=18]
+
+flags = 7
+storage = 0
+lossy_quality = 0.7
+flags = 7
+size = Vector2( 20, 20 )
+
+[sub_resource type="RectangleShape2D" id=19]
+
+custom_solver_bias = 0.0
+extents = Vector2( 10, 10 )
 
 [node name="World" type="Node2D" index="0"]
 
@@ -788,7 +850,9 @@ script = SubResource( 1 )
 
 [node name="Transports" type="Node" parent="Map" index="2"]
 
-[node name="UI" type="Container" parent="Map" index="3"]
+[node name="Armies" type="Node" parent="Map" index="3"]
+
+[node name="UI" type="Container" parent="Map" index="4"]
 
 editor/display_folded = true
 anchor_left = 0.0
@@ -822,7 +886,7 @@ mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 1
 custom_styles/panel = ExtResource( 1 )
-script = SubResource( 14 )
+script = SubResource( 2 )
 _sections_unfolded = [ "Visibility", "custom_styles" ]
 __meta__ = {
 "_edit_group_": true
@@ -1013,10 +1077,10 @@ align = 1
 percent_visible = 1.0
 lines_skipped = 0
 max_lines_visible = -1
-script = SubResource( 15 )
+script = SubResource( 3 )
 _sections_unfolded = [ "Anchor", "Margin", "Rect", "Size Flags", "Visibility", "custom_fonts" ]
 
-[node name="Templates" type="Node" parent="Map" index="4"]
+[node name="Templates" type="Node" parent="Map" index="5"]
 
 [node name="Structure" type="Area2D" parent="Map/Templates" index="0" groups=[
 "Structure",
@@ -1032,18 +1096,21 @@ angular_damp = 1.0
 collision_mask = 0
 audio_bus_override = false
 audio_bus_name = "Master"
-script = SubResource( 2 )
+script = SubResource( 4 )
 _sections_unfolded = [ "Collision", "Material", "Transform" ]
+__meta__ = {
+"_edit_group_": true
+}
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
 
-material = SubResource( 3 )
-texture = SubResource( 4 )
+material = SubResource( 5 )
+texture = SubResource( 6 )
 _sections_unfolded = [ "Material", "Region", "Transform" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
 
-shape = SubResource( 5 )
+shape = SubResource( 7 )
 _sections_unfolded = [ "Transform" ]
 
 [node name="Acronym" type="Label" parent="Map/Templates/Structure" index="2"]
@@ -1081,18 +1148,21 @@ angular_damp = 1.0
 collision_mask = 0
 audio_bus_override = false
 audio_bus_name = "Master"
-script = SubResource( 6 )
+script = SubResource( 8 )
 _sections_unfolded = [ "Collision", "Material", "Pause", "Transform" ]
+__meta__ = {
+"_edit_group_": true
+}
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
 
-material = SubResource( 7 )
-texture = SubResource( 8 )
+material = SubResource( 9 )
+texture = SubResource( 10 )
 _sections_unfolded = [ "Material" ]
 
 [node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
 
-shape = SubResource( 9 )
+shape = SubResource( 11 )
 
 [node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
 
@@ -1131,21 +1201,52 @@ linear_damp = 0.1
 angular_damp = 1.0
 audio_bus_override = false
 audio_bus_name = "Master"
-script = SubResource( 10 )
+script = SubResource( 12 )
 _sections_unfolded = [ "Collision" ]
+__meta__ = {
+"_edit_group_": true
+}
 
 [node name="Sprite" type="Sprite" parent="Map/Templates/Squad" index="0"]
 
-material = SubResource( 11 )
-texture = SubResource( 12 )
+material = SubResource( 13 )
+texture = SubResource( 14 )
 _sections_unfolded = [ "Material" ]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Map/Templates/Squad" index="1"]
 
 visible = false
-shape = SubResource( 13 )
+shape = SubResource( 15 )
 
-[node name="Label" type="Label" parent="Map" index="5"]
+[node name="Army" type="Area2D" parent="Map/Templates" index="3" groups=[
+"Army",
+]]
+
+position = Vector2( 481.849, 70.1479 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 16 )
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Sprite" type="Sprite" parent="Map/Templates/Army" index="0"]
+
+material = SubResource( 17 )
+texture = SubResource( 18 )
+_sections_unfolded = [ "Material" ]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Map/Templates/Army" index="1"]
+
+shape = SubResource( 19 )
+_sections_unfolded = [ "Transform" ]
+
+[node name="Label" type="Label" parent="Map" index="6"]
 
 anchor_left = 0.0
 anchor_top = 0.0
@@ -1160,7 +1261,7 @@ mouse_filter = 2
 mouse_default_cursor_shape = 0
 size_flags_horizontal = 1
 size_flags_vertical = 4
-text = " v1.0.0 \"Prototype One\""
+text = " v1.1.0 \"Armies go to war\""
 percent_visible = 1.0
 lines_skipped = 0
 max_lines_visible = -1
@@ -1169,7 +1270,7 @@ _sections_unfolded = [ "Anchor", "Grow Direction", "Margin" ]
 [node name="Timer" type="Timer" parent="." index="1"]
 
 process_mode = 1
-wait_time = 5.0
+wait_time = 1.0
 one_shot = false
 autostart = true
 
