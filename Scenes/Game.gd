@@ -25,7 +25,8 @@ const TEST_CONFIGURATION = {
 		squadStructureBombardHitPoints = 20,
 		squadTransportBombardDestoryChance = 100,
 		squadFighterHitPoints = 60,
-		squadBomberHitPoints = 5
+		squadBomberHitPoints = 5,
+		timertick = 1
 	}
 
 const GAME_CONFIGURATION = {
@@ -38,7 +39,8 @@ const GAME_CONFIGURATION = {
 		squadStructureBombardHitPoints = 20,
 		squadTransportBombardDestoryChance = 30,
 		squadFighterHitPoints = 30,
-		squadBomberHitPoints = 5
+		squadBomberHitPoints = 5,
+		timertick = 5
 	}
 
 var CONFIGURATION = TEST_CONFIGURATION

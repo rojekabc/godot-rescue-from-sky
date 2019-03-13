@@ -22,6 +22,7 @@ func _ready():
 	Tool.children_action($Map/Templates, 'hide')
 	Tool.children_action($Map/UI, 'hide')
 	# Start timestamp calculation from beginig of play
+	$Timer.wait_time = Game.CONFIGURATION.timertick
 	$Timer.connect('timeout', self, \"_timeout\")
 	# Prepare materials
 	_prepare_materials()
@@ -210,7 +211,7 @@ func squad_start(source, target, planes):
 	source.PlaneHolder.rem_planes(planes)
 	squad.PlaneHolder.add_planes(planes)
 	$Map/Squads.add_child(squad)
-	_calculate_squad_tween(squad, squad.Moveable.target)
+	_calculate_move_tween(squad)
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
@@ -226,26 +227,11 @@ func transport_start(sourceStructure, targetStructure, transportedResource):
 		distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
 		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
 
-func _calculate_squad_tween(squad, target):
-	var targetVector = target.position - squad.position
-	var distance = targetVector.length()
-	var targetDirection = targetVector.normalized()
-	var time
-	var targetPosition
-	var squadSpeed = squad.get_speed()
-	
-	if distance > squadSpeed:
-		time = $Timer.wait_time
-		targetPosition = squad.position + targetDirection*squadSpeed
-	# elif distance < 10:
-	#	# It's very close - the action can be started
-	#	pass
-	else:
-		time = $Timer.wait_time * distance / squadSpeed
-		targetPosition = squad.Moveable.target.position
-	$Tween.interpolate_property(squad, \"position\",
-		squad.position, targetPosition,
-		time, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
+func _calculate_move_tween(moveObject):
+	var move = moveObject.Moveable.calculate_move()
+	$Tween.interpolate_property(moveObject, \"position\",
+		moveObject.position, move.position,
+		move.time, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
 	pass
 
 # Call by tween signal
@@ -255,7 +241,10 @@ func _tween_completed(object, key):
 		# $Tween.remove(object, key)
 	elif object.is_in_group(\"Squad\"):
 		$Tween.remove(object, key)
-		_calculate_squad_tween(object, object.Moveable.target)
+		_calculate_move_tween(object)
+	elif object.is_in_group(\"Army\"):
+		$Tween.remove(object, key)
+		_calculate_move_tween(object)
 	pass
 
 func _transport_create(sourceStructure, targetStructure, transportedResource):
@@ -290,10 +279,6 @@ func army_find_target(source):
 	var closest = []
 	var closest_structure = army_find_target_from_array(source, $Map/Structures.get_children())
 	if closest_structure: closest.append(closest_structure)
-	# var closest_squad = army_find_target_from_array(source, $Map/Squads.get_children())
-	# if closest_squad: closest.append(closest_squad)
-	# var closest_transport = army_find_target_from_array(source, $Map/Transports.get_children())
-	# if closest_transport: closest.append(closest_transport)
 	var closest_army = army_find_target_from_array(source, $Map/Armies.get_children())
 	if closest_army: closest.append(closest_army)
 	return army_find_target_from_array(source, closest)
@@ -304,19 +289,22 @@ func army_create(source, target):
 	var army = Game.create(template)
 	army.Moveable.assign(source, target)
 	army.ownerIdx = source.ownerIdx
+	army.Moveable.speed = Game.CONFIGURATION.transportSpeed
 	army.get_node('Sprite').material = Game.playerDefinitions[army.ownerIdx].armyMaterial
 	return army
 
 func army_start(source, target):
 	var army = army_create(source, target)
 	army.visible = true
+	army.position = source.position
 	$Map/Armies.add_child(army)
-	var distance = (target.position - source.position).length()
-	$Tween.interpolate_property(
-		army, \"position\",
-		source.position, target.position,
-		distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
-		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+	_calculate_move_tween(army)
+	# var distance = (target.position - source.position).length()
+	# $Tween.interpolate_property(
+	#	army, \"position\",
+	#	source.position, target.position,
+	#	distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
+	#	Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
 	pass
 	"
 _sections_unfolded = [ "Resource" ]
@@ -724,6 +712,10 @@ func _update_planes(object, planesData):
 		if plane.type == Game.BOMBER:
 			type = Game.BOMBER
 			break
+	if type == Game.FIGHTER:
+		Moveable.speed = Game.CONFIGURATION.fighterSquadSpeed
+	else:
+		Moveable.speed =  Game.CONFIGURATION.bomberSquadSpeed
 	pass
 
 func clean():
@@ -800,12 +792,6 @@ func attack_planes(squadPlanes, targetPlanes):
 func get_type():
 	return type
 
-func get_speed():
-	if type == Game.FIGHTER:
-		return Game.CONFIGURATION.fighterSquadSpeed
-	else:
-		return Game.CONFIGURATION.bomberSquadSpeed
-
 func _body_entered(body):
 	if Moveable.target == body:
 		catch_target()
@@ -845,11 +831,39 @@ var Destuctable
 var Targetable
 var ownerIdx
 
+var tween
+
 func _ready():
-	pass
+	# structures
+	connect('body_entered', self, '_body_entered')
+	# transorts / armies
+	connect('area_entered', self, '_body_entered')
+	# resolve Tween
+	tween = Game.getWorld().get_child(\"Tween\")
 
 func get_name():
-	return Game.playerDefinitions[ownerIdx].name + \".army\""
+	return Game.playerDefinitions[ownerIdx].name + \".army\"
+
+func catch_structure(structure):
+	pass
+
+func catch_transport(transport):
+	pass
+
+func catch_army(army):
+	pass
+
+func _body_entered(body):
+	if body.ownerIdx == ownerIdx:
+		return
+	
+	if body.is_in_group(\"Structure\"):
+		catch_structure(body)
+	elif body.is_in_group(\"Transport\"):
+		catch_transport(transport)
+	elif body.is_in_group(\"Army\"):
+		catch_army(army)
+"
 _sections_unfolded = [ "Resource" ]
 
 [sub_resource type="ShaderMaterial" id=17]
@@ -875,7 +889,7 @@ size = Vector2( 20, 20 )
 [sub_resource type="RectangleShape2D" id=19]
 
 custom_solver_bias = 0.0
-extents = Vector2( 10, 10 )
+extents = Vector2( 15, 15 )
 
 [node name="World" type="Node2D" index="0"]
 

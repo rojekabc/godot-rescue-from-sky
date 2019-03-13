@@ -3,6 +3,7 @@ var object
 var source = null
 # Targetable
 var target = null
+var speed
 
 func _init(object):
 	self.object = object
@@ -33,3 +34,21 @@ func hit_target(points):
 
 func get_target_planes():
 	return target.PlaneHolder.planes
+
+func calculate_move():
+	var targetVector = target.position - object.position
+	var distance = targetVector.length()
+	var targetDirection = targetVector.normalized()
+	var time
+	var targetPosition
+	if distance > speed:
+		time = Game.CONFIGURATION.timertick
+		targetPosition = object.position + targetDirection * speed
+	# elif distance < 10:
+	#	# It's very close - the action can be started
+	#	pass
+	else:
+		time = Game.CONFIGURATION.timertick * distance / speed
+		targetPosition = target.position
+	return {position = targetPosition, time = time}
+	
