@@ -83,7 +83,6 @@ func _select_target_action(globalPosition):
 		return _fail('Unknown mission')
 	selectTarget.target = target
 	squad_start(selectTarget.source, target, selectTarget.planes)
-	army_start(selectTarget.source, target) # TEST CALL - REMOVE
 	selectTarget = null
 
 # Find element under point. From the list the structure will be always selected as more priority.
@@ -276,7 +275,30 @@ func _structure_create(ownerIdx, type):
 func _airplane_create(ownerIdx, type):
 	var airplane = Game.AirPlane.new(ownerIdx, type)
 	return airplane
+
+func army_find_target_from_array(source, array):
+	var target = null
+	var distance = 20000
+	for child in array:
+		var targetDistance = (child.position - source.position).length()
+		if (source.ownerIdx != child.ownerIdx and targetDistance < distance):
+			target = child
+			distance = targetDistance
+	return target
+
+func army_find_target(source):
+	var closest = []
+	var closest_structure = army_find_target_from_array(source, $Map/Structures.get_children())
+	if closest_structure: closest.append(closest_structure)
+	# var closest_squad = army_find_target_from_array(source, $Map/Squads.get_children())
+	# if closest_squad: closest.append(closest_squad)
+	# var closest_transport = army_find_target_from_array(source, $Map/Transports.get_children())
+	# if closest_transport: closest.append(closest_transport)
+	var closest_army = army_find_target_from_array(source, $Map/Armies.get_children())
+	if closest_army: closest.append(closest_army)
+	return army_find_target_from_array(source, closest)
 	
+
 func army_create(source, target):
 	var template = $Map/Templates/Army
 	var army = Game.create(template)
@@ -434,6 +456,7 @@ _sections_unfolded = [ "Resource" ]
 
 [sub_resource type="GDScript" id=4]
 
+resource_name = "Structure"
 script/source = "extends Area2D
 
 const HALF_SIZE = 30
@@ -520,6 +543,20 @@ func _timeout():
 	_call_type_function('timeout')
 	pass
 
+func _Capital_timeout():
+	_Bunker_timeout()
+
+
+func _Bunker_timeout():
+	if not Producer.has(Game.ARMY):
+		return
+	var target = Game.getWorld().army_find_target(self)
+	if target:
+		print(target.get_name())
+		Game.getWorld().army_start(self, target)
+		Producer.consume(Game.ARMY)
+	pass
+
 func _Airport_timeout():
 	if not Consumer.has(Game.AIRPLANE):
 		return
@@ -578,6 +615,7 @@ extents = Vector2( 20, 20 )
 
 [sub_resource type="GDScript" id=8]
 
+resource_name = "Transport"
 script/source = "extends Area2D
 
 var resource
@@ -655,6 +693,7 @@ extents = Vector2( 15, 15 )
 
 [sub_resource type="GDScript" id=12]
 
+resource_name = "Squad"
 script/source = "extends Area2D
 
 var ownerIdx
@@ -803,7 +842,7 @@ script/source = "extends Area2D
 
 var Moveable
 var Destuctable
-var Tatgetable
+var Targetable
 var ownerIdx
 
 func _ready():
@@ -1222,6 +1261,7 @@ shape = SubResource( 15 )
 "Army",
 ]]
 
+editor/display_folded = true
 position = Vector2( 481.849, 70.1479 )
 input_pickable = true
 gravity_vec = Vector2( 0, 1 )

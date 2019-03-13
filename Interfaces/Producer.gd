@@ -5,6 +5,14 @@ var produces = {}
 func is_producing(resource):
 	return produces.has(resource)
 
+func has(resource):
+	return produces[resource].has
+
+func consume(resource):
+	var produce = produces[resource]
+	if produce.has:
+		produce.has = false
+
 func add_resource(resource):
 	var resourceDefinition = Game.resourceDefinitions[resource]
 	produces[resource] = {
