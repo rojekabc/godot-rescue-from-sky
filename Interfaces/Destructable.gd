@@ -1,11 +1,10 @@
 var object
 
-var hp
-var destroyFunc
+var hp = 100
+var destroyFunc = 'destroy'
 
 func _init(object):
 	self.object = object
-	self.hp = 100
 
 func assign(destroy_func = 'destroy'):
 	destroyFunc = destroy_func
@@ -17,11 +16,12 @@ func hit(points):
 	if is_destroyed():
 		return
 		
-	Game.verbose('Hit ' + str(points) + ' points to ' + object.get_name())
 	if hp > points:
+		Game.verbose('Hit ' + str(points) + ' points to ' + object.get_name())
 		hp -= points
 	else:
-		Game.verbose(object.get_name() + ' destroyed')
+		Game.verbose('Hit ' + str(points) + ' points to ' + object.get_name() + ' and destroyed')
 		hp = 0
+		object.emit_signal('object_destroyed', object)
 		if destroyFunc and object.has_method(destroyFunc):
 			object.call(destroyFunc)

@@ -1,0 +1,144 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=2]
+
+[sub_resource type="GDScript" id=1]
+
+resource_name = "Transport"
+script/source = "extends Area2D
+
+var LOG = Game.CONFIGURATION.loggers.has('Transport')
+
+var resource
+var ownerIdx
+
+var Moveable
+var Destructable
+
+signal object_destroyed(object)
+
+func _init():
+	Moveable = Game.Moveable.new(self)
+	Destructable = Game.Destructable.new(self)
+
+func setup(sourceStructure, targetStructure, transportedResource):
+	resource = transportedResource
+	ownerIdx = sourceStructure.ownerIdx
+	Moveable.assign(sourceStructure, targetStructure)
+	Destructable.assign()
+	$Acronym.text = Game.resourceDefinitions[resource].acronym
+	pass
+
+func _ready():
+	if get_parent().get_name() == 'Templates':
+		return
+	pass
+
+func target_destroyed(target):
+	Game.verbose(get_name() + ': Target destroyed')
+
+func get_name():
+	return Game.playerDefinitions[Moveable.source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name
+
+# destroy after hit
+func destroy():
+	# Resource won't go to the target - inform it
+	Moveable.target.Consumer.clear(resource)
+	# clean up the object
+	clean_up()
+
+# clean up the object
+func clean_up():
+	# remove the object		
+	Game.getWorld().get_node('Tween').remove(self, 'position')
+	queue_free()
+
+func complete():
+	if LOG: Game.verbose(\"Transport completed from \"
+			+ Game.playerDefinitions[Moveable.source.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[Moveable.source.type].name
+			+ \" send \" + Game.resourceDefinitions[resource].name
+			+ \" to \" + Game.playerDefinitions[Moveable.target.ownerIdx].name
+			+ \".\" + Game.structureDefinitions[Moveable.target.type].name)
+	Moveable.target.Consumer.put(resource)
+	emit_signal('object_destroyed', self)
+	clean_up()
+	pass
+"
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="ShaderMaterial" id=2]
+
+render_priority = 0
+shader = ExtResource( 1 )
+shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
+_sections_unfolded = [ "shader_param" ]
+
+[sub_resource type="ImageTexture" id=3]
+
+flags = 0
+storage = 0
+lossy_quality = 0.7
+flags = 0
+size = Vector2( 30, 30 )
+
+[sub_resource type="RectangleShape2D" id=4]
+
+custom_solver_bias = 0.0
+extents = Vector2( 15, 15 )
+
+[node name="Trasnport" type="Area2D" groups=[
+"Transport",
+]]
+
+position = Vector2( 199.009, 84.3346 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+collision_mask = 0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 1 )
+_sections_unfolded = [ "Collision", "Material", "Pause", "Transform" ]
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Sprite" type="Sprite" parent="." index="0"]
+
+material = SubResource( 2 )
+texture = SubResource( 3 )
+_sections_unfolded = [ "Material" ]
+
+[node name="Collision" type="CollisionShape2D" parent="." index="1"]
+
+shape = SubResource( 4 )
+
+[node name="Acronym" type="Label" parent="." index="2"]
+
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_left = -15.0
+margin_top = -14.0
+margin_right = 16.0
+margin_bottom = 18.0
+rect_pivot_offset = Vector2( 0, 0 )
+rect_clip_content = false
+mouse_filter = 2
+mouse_default_cursor_shape = 0
+size_flags_horizontal = 1
+size_flags_vertical = 4
+custom_fonts/font = ExtResource( 2 )
+text = "X"
+align = 1
+percent_visible = 1.0
+lines_skipped = 0
+max_lines_visible = -1
+_sections_unfolded = [ "custom_fonts" ]
+
+

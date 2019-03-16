@@ -1,12 +1,9 @@
-[gd_scene load_steps=27 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=1]
 [ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=2]
 [ext_resource path="res://Resources/TitleFont.tres" type="DynamicFont" id=3]
 [ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=4]
-[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=5]
-[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=6]
-[ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=7]
 
 [sub_resource type="GDScript" id=1]
 
@@ -19,7 +16,6 @@ func _ready():
 	# Enable randomization
 	randomize()
 	# Hide templates
-	Tool.children_action($Map/Templates, 'hide')
 	Tool.children_action($Map/UI, 'hide')
 	# Start timestamp calculation from beginig of play
 	$Timer.wait_time = Game.CONFIGURATION.timertick
@@ -123,9 +119,9 @@ func _find_structures_at(global_positions):
 
 func _prepare_materials():
 	for playerDefinition in Game.playerDefinitions:
-		playerDefinition.structureMaterial = $Map/Templates/Structure/Sprite.material.duplicate()
+		playerDefinition.structureMaterial = Game.Structure.get_node('Sprite').material.duplicate()
 		playerDefinition.structureMaterial.set('shader_param/color', playerDefinition.color)
-		playerDefinition.armyMaterial = $Map/Templates/Army/Sprite.material.duplicate()
+		playerDefinition.armyMaterial = Game.Army.get_node('Sprite').material.duplicate()
 		playerDefinition.armyMaterial.set('shader_param/color', playerDefinition.color)
 
 func _timeout():
@@ -203,7 +199,7 @@ func ui_squad_panel(airport):
 	pass
 
 func squad_start(source, target, planes):
-	var squad = $Map/Templates/Squad.duplicate()
+	var squad = Game.Squad.duplicate()
 	squad.visible = true
 	squad.position = source.position
 	squad.ownerIdx = source.ownerIdx
@@ -244,16 +240,19 @@ func _tween_completed(object, key):
 		_calculate_move_tween(object)
 	elif object.is_in_group(\"Army\"):
 		$Tween.remove(object, key)
+		# Check that are any new closest target
+		var target = army_find_target(object)
+		object.Moveable.assign_target(target)
 		_calculate_move_tween(object)
 	pass
 
 func _transport_create(sourceStructure, targetStructure, transportedResource):
-	var transport = $Map/Templates/Trasnport.duplicate()
+	var transport = Game.Transport.duplicate()
 	transport.setup(sourceStructure, targetStructure, transportedResource)
 	return transport
 
 func _structure_create(ownerIdx, type):
-	var structure = $Map/Templates/Structure.duplicate()
+	var structure = Game.Structure.duplicate()
 	structure.assign_type(type, $Timer)
 	structure.visible = true
 	structure.ownerIdx = ownerIdx
@@ -270,10 +269,21 @@ func army_find_target_from_array(source, array):
 	var distance = 20000
 	for child in array:
 		var targetDistance = (child.position - source.position).length()
-		if (source.ownerIdx != child.ownerIdx and targetDistance < distance):
+		if (source.ownerIdx != child.ownerIdx 
+		and targetDistance < distance 
+		and not child.Destructable.is_destroyed()):
 			target = child
 			distance = targetDistance
 	return target
+
+func army_find_target_overlaps(source, array):
+	var target = null
+	for child in array:
+		if (source.ownerIdx != child.ownerIdx
+			and source.overlaps_area(child)
+			and not child.Destructable.is_destroyed()):
+			return child
+	return null
 
 func army_find_target(source):
 	var closest = []
@@ -281,30 +291,27 @@ func army_find_target(source):
 	if closest_structure: closest.append(closest_structure)
 	var closest_army = army_find_target_from_array(source, $Map/Armies.get_children())
 	if closest_army: closest.append(closest_army)
+	var overlaps_transport = army_find_target_overlaps(source, $Map/Transports.get_children())
+	if overlaps_transport: return overlaps_transport
 	return army_find_target_from_array(source, closest)
 	
 
 func army_create(source, target):
-	var template = $Map/Templates/Army
-	var army = Game.create(template)
-	army.Moveable.assign(source, target)
+	var army = Game.create(Game.Army)
+	army.id = Game.get_army_id()
 	army.ownerIdx = source.ownerIdx
+	army.Moveable.assign(source, target)
 	army.Moveable.speed = Game.CONFIGURATION.transportSpeed
 	army.get_node('Sprite').material = Game.playerDefinitions[army.ownerIdx].armyMaterial
 	return army
 
 func army_start(source, target):
 	var army = army_create(source, target)
+	Game.verbose('Send ' + army.get_name() + ' to attack ' + target.get_name())
 	army.visible = true
 	army.position = source.position
 	$Map/Armies.add_child(army)
 	_calculate_move_tween(army)
-	# var distance = (target.position - source.position).length()
-	# $Tween.interpolate_property(
-	#	army, \"position\",
-	#	source.position, target.position,
-	#	distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
-	#	Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
 	pass
 	"
 _sections_unfolded = [ "Resource" ]
@@ -441,455 +448,6 @@ func fail(msg):
 	_status(msg, FAIL_COLOR)
 "
 _sections_unfolded = [ "Resource" ]
-
-[sub_resource type="GDScript" id=4]
-
-resource_name = "Structure"
-script/source = "extends Area2D
-
-const HALF_SIZE = 30
-const FULL_SIZE = 60
-
-# type of Game.STRUCTURE enum
-var type
-var ownerIdx
-
-# var consumes = {}
-# var produces = {}
-
-var PlaneHolder
-var Destructable
-var Targetable
-var Consumer
-var Producer
-
-# The information about planes is updated
-signal update_planes(object, planesData)
-
-func _init():
-	Destructable = Game.Destructable.new(self)
-	Targetable = Game.Targetable.new(self)
-	Consumer = Game.Consumer.new(self)
-	Producer = Game.Producer.new(self)
-
-func _Airport_create_data():
-	PlaneHolder = Game.PlaneHolder.new(self)
-
-# Register consumer, which will receive produced resource
-func register_consumer(resource, consumer):
-	Producer.add_consumer(resource, consumer)
-
-func set_suplier(resource, suplier):
-	Consumer.set_suplier(resource, suplier)
-
-func random_position(ownerIdx):
-	position.x = HALF_SIZE + Game.MAP_WIDTH/2*ownerIdx + randi() % (Game.MAP_WIDTH/2 - FULL_SIZE)
-	position.y = HALF_SIZE + randi() % (Game.MAP_HEIGHT - FULL_SIZE)
-	pass
-
-func assign_type(strType, timer):
-	var strDef = Game.structureDefinitions[strType]
-	type = strDef.type
-	$Acronym.text = strDef.acronym
-	timer.connect('timeout', self, '_timeout')
-	for resource in strDef.consumes:
-		Consumer.add(resource)
-	for resource in strDef.produces:
-		Producer.add_resource(resource)
-	_call_type_function('create_data')
-
-func get_type():
-	return type
-
-func get_name():
-	return Game.playerDefinitions[ownerIdx].name + '.' + Game.structureDefinitions[type].name
-	
-func _ready():
-	pass
-
-func get_corners():
-	var result = []
-	result.append(Vector2(position.x-HALF_SIZE, position.y-HALF_SIZE))
-	result.append(Vector2(position.x-HALF_SIZE, position.y+HALF_SIZE))
-	result.append(Vector2(position.x+HALF_SIZE, position.y-HALF_SIZE))
-	result.append(Vector2(position.x+HALF_SIZE, position.y+HALF_SIZE))
-	return result
-
-func _call_type_function(function, args=null):
-	var strName = Game.structureDefinitions[type].name
-	var callName = '_' + strName + '_' + function
-	if has_method(callName):
-		if args: call(callName, args)
-		else: call(callName)
-
-func pressed(world):
-	_call_type_function('pressed', world)
-	pass
-
-func _timeout():
-	Producer.timeout()
-	_call_type_function('timeout')
-	pass
-
-func _Capital_timeout():
-	_Bunker_timeout()
-
-
-func _Bunker_timeout():
-	if not Producer.has(Game.ARMY):
-		return
-	var target = Game.getWorld().army_find_target(self)
-	if target:
-		print(target.get_name())
-		Game.getWorld().army_start(self, target)
-		Producer.consume(Game.ARMY)
-	pass
-
-func _Airport_timeout():
-	if not Consumer.has(Game.AIRPLANE):
-		return
-	var assignPlaneType = []
-	var planeCount = _Airport_count_planes()
-	
-	if planeCount[Game.FIGHTER] < Game.CONFIGURATION.airportFighterLimit:
-		assignPlaneType.append(Game.FIGHTER)
-	if planeCount[Game.BOMBER] < Game.CONFIGURATION.airportBomberLimit:
-		assignPlaneType.append(Game.BOMBER)
-		
-	if assignPlaneType.empty():
-		return
-	
-	var plane = Game.getWorld()._airplane_create(ownerIdx, assignPlaneType[randi() % assignPlaneType.size()])
-	PlaneHolder.add_plane(plane)
-	Consumer.consume(Game.AIRPLANE)
-	pass
-
-func _Airport_count_planes():
-	var fighterCount = 0
-	var bomberCount = 0
-	for plane in PlaneHolder.planes:
-		if plane.type == Game.FIGHTER: fighterCount += 1
-		if plane.type == Game.BOMBER: bomberCount += 1
-	return {
-			Game.FIGHTER : fighterCount,
-			Game.BOMBER : bomberCount
-		}
-
-func _Airport_pressed(world):
-	world.ui_squad_panel(self)
-
-"
-_sections_unfolded = [ "Resource" ]
-
-[sub_resource type="ShaderMaterial" id=5]
-
-render_priority = 0
-shader = ExtResource( 5 )
-shader_param/color = Plane( 0, 0, 0, 1 )
-_sections_unfolded = [ "shader_param" ]
-
-[sub_resource type="ImageTexture" id=6]
-
-flags = 0
-storage = 0
-lossy_quality = 0.7
-flags = 0
-size = Vector2( 60, 60 )
-
-[sub_resource type="RectangleShape2D" id=7]
-
-custom_solver_bias = 0.0
-extents = Vector2( 20, 20 )
-
-[sub_resource type="GDScript" id=8]
-
-resource_name = "Transport"
-script/source = "extends Area2D
-
-var resource
-var ownerIdx
-
-var Moveable
-var Destructable
-var Targetable
-
-func _init():
-	Moveable = Game.Moveable.new(self)
-	Destructable = Game.Destructable.new(self)
-	Targetable = Game.Targetable.new(self)
-
-func setup(sourceStructure, targetStructure, transportedResource):
-	Moveable.assign(sourceStructure, targetStructure)
-	Destructable.assign()
-	resource = transportedResource
-	ownerIdx = sourceStructure.ownerIdx
-	$Acronym.text = Game.resourceDefinitions[resource].acronym
-	pass
-
-func _ready():
-	pass
-
-func get_name():
-	return Game.playerDefinitions[Moveable.source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name
-
-# destroy after hit
-func destroy():
-	# Resource won't go to the target - inform it
-	Moveable.target.Consumer.clear(resource)
-	# clean up the object
-	clean_up()
-
-# clean up the object
-func clean_up():
-	Targetable.removed()
-	# remove the object		
-	Game.getWorld().get_node('Tween').remove(self, 'position')
-	queue_free()
-
-func complete():
-	Game.verbose(\"Transport completed from \"
-			+ Game.playerDefinitions[Moveable.source.ownerIdx].name
-			+ \".\" + Game.structureDefinitions[Moveable.source.type].name
-			+ \" send \" + Game.resourceDefinitions[resource].name
-			+ \" to \" + Game.playerDefinitions[Moveable.target.ownerIdx].name
-			+ \".\" + Game.structureDefinitions[Moveable.target.type].name)
-	Moveable.target.Consumer.put(resource)
-	clean_up()
-	pass
-"
-_sections_unfolded = [ "Resource" ]
-
-[sub_resource type="ShaderMaterial" id=9]
-
-render_priority = 0
-shader = ExtResource( 5 )
-shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
-_sections_unfolded = [ "shader_param" ]
-
-[sub_resource type="ImageTexture" id=10]
-
-flags = 0
-storage = 0
-lossy_quality = 0.7
-flags = 0
-size = Vector2( 30, 30 )
-
-[sub_resource type="RectangleShape2D" id=11]
-
-custom_solver_bias = 0.0
-extents = Vector2( 15, 15 )
-
-[sub_resource type="GDScript" id=12]
-
-resource_name = "Squad"
-script/source = "extends Area2D
-
-var ownerIdx
-var type
-
-var Moveable
-var Targetable
-var PlaneHolder
-
-signal update_planes(object, planesData)
-
-func _ready():
-	# structures
-	connect('body_entered', self, '_body_entered')
-	# transorts
-	connect('area_entered', self, '_body_entered')
-	pass
-
-func _init():
-	Moveable = Game.Moveable.new(self)
-	Targetable = Game.Targetable.new(self)
-	PlaneHolder = Game.PlaneHolder.new(self)
-	connect('update_planes', self, '_update_planes')
-
-func _update_planes(object, planesData):
-	type = Game.FIGHTER
-	for plane in planesData:
-		if plane.type == Game.BOMBER:
-			type = Game.BOMBER
-			break
-	if type == Game.FIGHTER:
-		Moveable.speed = Game.CONFIGURATION.fighterSquadSpeed
-	else:
-		Moveable.speed =  Game.CONFIGURATION.bomberSquadSpeed
-	pass
-
-func clean():
-	Moveable.stop_targeting()
-	Targetable.removed()
-	queue_free()
-
-func catch_target():
-	if Moveable.is_home():
-		PlaneHolder.move_planes(Moveable.source)
-		Game.verbose('Squad landing')
-		clean()
-	else:
-		attack_target()
-		Moveable.stop_targeting()
-		Moveable.move_home()
-
-func attack_target():
-	var target = Moveable.target
-	if target.is_in_group('Structure'):
-		attack_structure()
-	elif target.is_in_group('Transport'):
-		attack_transport()
-	elif target.is_in_group('Squad'):
-		attack_squad()
-
-func attack_structure():
-	for plane in PlaneHolder.planes:
-		if plane.type == Game.BOMBER:
-			Moveable.hit_target(Game.CONFIGURATION.squadStructureBombardHitPoints)
-
-func attack_transport():
-	for plane in PlaneHolder.planes:
-		if can_bombard_transport(plane):
-			Moveable.hit_target(100)
-
-func can_bombard_transport(plane):
-	return plane.type == Game.BOMBER and (randi() % 100 <= Game.CONFIGURATION.squadTransportBombardDestoryChance)
-
-func attack_squad():
-	var squadPlanes = PlaneHolder.planes
-	var targetPlanes = Moveable.get_target_planes()
-	
-	# Algorithm - hit random from oposite side
-	attack_planes(squadPlanes, targetPlanes)
-	attack_planes(targetPlanes, squadPlanes)
-	# destroy planes, which has 0 hit points
-	remove_destroyed_planes(squadPlanes)
-	remove_destroyed_planes(targetPlanes)
-	# validate squads
-	if squadPlanes.empty():
-		clean()
-	if targetPlanes.empty():
-		Moveable.target.clean()
-
-func remove_destroyed_planes(squadPlanes):
-	var destroyed = []
-	for plane in squadPlanes:
-		if plane.Destructable.is_destroyed():
-			destroyed.append(plane)
-	for plane in destroyed:
-		squadPlanes.erase(plane)
-
-func attack_planes(squadPlanes, targetPlanes):
-	for plane in squadPlanes:
-		var targetPlane = targetPlanes[randi() % targetPlanes.size()]
-		var hitPoints
-		if plane.type == Game.BOMBER:
-			hitPoints = Game.CONFIGURATION.squadBomberHitPoints
-		elif plane.type == Game.FIGHTER:
-			hitPoints = Game.CONFIGURATION.squadFighterHitPoints
-		targetPlane.Destructable.hit(hitPoints)
-
-func get_type():
-	return type
-
-func _body_entered(body):
-	if Moveable.target == body:
-		catch_target()
-		pass
-		
-	pass
-"
-_sections_unfolded = [ "Resource" ]
-
-[sub_resource type="ShaderMaterial" id=13]
-
-render_priority = 0
-shader = ExtResource( 5 )
-shader_param/color = Plane( 0.8, 0, 0, 0.6 )
-_sections_unfolded = [ "shader_param" ]
-
-[sub_resource type="ImageTexture" id=14]
-
-flags = 7
-storage = 0
-lossy_quality = 0.7
-flags = 7
-size = Vector2( 30, 30 )
-
-[sub_resource type="RectangleShape2D" id=15]
-
-custom_solver_bias = 0.0
-extents = Vector2( 15, 15 )
-
-[sub_resource type="GDScript" id=16]
-
-resource_name = "Army"
-script/source = "extends Area2D
-
-var Moveable
-var Destuctable
-var Targetable
-var ownerIdx
-
-var tween
-
-func _ready():
-	# structures
-	connect('body_entered', self, '_body_entered')
-	# transorts / armies
-	connect('area_entered', self, '_body_entered')
-	# resolve Tween
-	tween = Game.getWorld().get_child(\"Tween\")
-
-func get_name():
-	return Game.playerDefinitions[ownerIdx].name + \".army\"
-
-func catch_structure(structure):
-	pass
-
-func catch_transport(transport):
-	pass
-
-func catch_army(army):
-	pass
-
-func _body_entered(body):
-	if body.ownerIdx == ownerIdx:
-		return
-	
-	if body.is_in_group(\"Structure\"):
-		catch_structure(body)
-	elif body.is_in_group(\"Transport\"):
-		catch_transport(transport)
-	elif body.is_in_group(\"Army\"):
-		catch_army(army)
-"
-_sections_unfolded = [ "Resource" ]
-
-[sub_resource type="ShaderMaterial" id=17]
-
-render_priority = 0
-shader = ExtResource( 7 )
-shader_param/color = Plane( 1, 0, 0, 1 )
-shader_param/size = 0.5
-shader_param/borderSize = 0.08
-shader_param/borderColor = Plane( 1, 1, 1, 1 )
-shader_param/secondBorderSize = 0.0
-shader_param/secondBorderColor = null
-_sections_unfolded = [ "shader_param" ]
-
-[sub_resource type="ImageTexture" id=18]
-
-flags = 7
-storage = 0
-lossy_quality = 0.7
-flags = 7
-size = Vector2( 20, 20 )
-
-[sub_resource type="RectangleShape2D" id=19]
-
-custom_solver_bias = 0.0
-extents = Vector2( 15, 15 )
 
 [node name="World" type="Node2D" index="0"]
 
@@ -1133,174 +691,7 @@ max_lines_visible = -1
 script = SubResource( 3 )
 _sections_unfolded = [ "Anchor", "Margin", "Rect", "Size Flags", "Visibility", "custom_fonts" ]
 
-[node name="Templates" type="Node" parent="Map" index="5"]
-
-[node name="Structure" type="Area2D" parent="Map/Templates" index="0" groups=[
-"Structure",
-]]
-
-editor/display_folded = true
-position = Vector2( 68.0187, 77.5413 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-collision_mask = 0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 4 )
-_sections_unfolded = [ "Collision", "Material", "Transform" ]
-__meta__ = {
-"_edit_group_": true
-}
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Structure" index="0"]
-
-material = SubResource( 5 )
-texture = SubResource( 6 )
-_sections_unfolded = [ "Material", "Region", "Transform" ]
-
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Structure" index="1"]
-
-shape = SubResource( 7 )
-_sections_unfolded = [ "Transform" ]
-
-[node name="Acronym" type="Label" parent="Map/Templates/Structure" index="2"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-margin_right = 29.0
-margin_bottom = 32.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 2
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 4
-custom_fonts/font = ExtResource( 6 )
-text = "C"
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
-_sections_unfolded = [ "custom_fonts" ]
-
-[node name="Trasnport" type="Area2D" parent="Map/Templates" index="1" groups=[
-"Transport",
-]]
-
-editor/display_folded = true
-position = Vector2( 199.009, 84.3346 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-collision_mask = 0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 8 )
-_sections_unfolded = [ "Collision", "Material", "Pause", "Transform" ]
-__meta__ = {
-"_edit_group_": true
-}
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Trasnport" index="0"]
-
-material = SubResource( 9 )
-texture = SubResource( 10 )
-_sections_unfolded = [ "Material" ]
-
-[node name="Collision" type="CollisionShape2D" parent="Map/Templates/Trasnport" index="1"]
-
-shape = SubResource( 11 )
-
-[node name="Acronym" type="Label" parent="Map/Templates/Trasnport" index="2"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-margin_left = -15.0
-margin_top = -14.0
-margin_right = 16.0
-margin_bottom = 18.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 2
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 4
-custom_fonts/font = ExtResource( 6 )
-text = "X"
-align = 1
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
-_sections_unfolded = [ "custom_fonts" ]
-
-[node name="Squad" type="Area2D" parent="Map/Templates" index="2" groups=[
-"Squad",
-]]
-
-editor/display_folded = true
-position = Vector2( 349.767, 72.1741 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 12 )
-_sections_unfolded = [ "Collision" ]
-__meta__ = {
-"_edit_group_": true
-}
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Squad" index="0"]
-
-material = SubResource( 13 )
-texture = SubResource( 14 )
-_sections_unfolded = [ "Material" ]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Map/Templates/Squad" index="1"]
-
-visible = false
-shape = SubResource( 15 )
-
-[node name="Army" type="Area2D" parent="Map/Templates" index="3" groups=[
-"Army",
-]]
-
-editor/display_folded = true
-position = Vector2( 481.849, 70.1479 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-audio_bus_override = false
-audio_bus_name = "Master"
-script = SubResource( 16 )
-__meta__ = {
-"_edit_group_": true
-}
-
-[node name="Sprite" type="Sprite" parent="Map/Templates/Army" index="0"]
-
-material = SubResource( 17 )
-texture = SubResource( 18 )
-_sections_unfolded = [ "Material" ]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Map/Templates/Army" index="1"]
-
-shape = SubResource( 19 )
-_sections_unfolded = [ "Transform" ]
-
-[node name="Label" type="Label" parent="Map" index="6"]
+[node name="Label" type="Label" parent="Map" index="5"]
 
 anchor_left = 0.0
 anchor_top = 0.0

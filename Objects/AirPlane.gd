@@ -2,7 +2,9 @@ var type
 var ownerIdx
 
 var Destructable
-	
+
+signal object_destroyed(object)
+
 func _init(ownerIdx, airplaneType):
 	self.type = airplaneType
 	self.ownerIdx = ownerIdx

@@ -1,0 +1,182 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
+
+[sub_resource type="GDScript" id=1]
+
+resource_name = "Army"
+script/source = "extends Area2D
+
+var Moveable
+var Destructable
+var ownerIdx
+
+signal object_destroyed(object)
+
+var attackTarget
+var dc = false
+
+var tween
+var timer
+var id
+
+# 1. army was attacking structure
+# 2. catch transport and stop it
+# 3. was attacked by enemy
+# 4. wins and find other target
+# 5. tarnsport don't move any more and wasn't destroyed
+
+func _ready():
+	if get_parent().get_name() == 'Templates':
+		return
+	# structures
+	connect('body_entered', self, '_body_entered')
+	# transorts / armies
+	connect('area_entered', self, '_body_entered')
+	# resolve Tween
+	tween = Game.getWorld().get_node(\"Tween\")
+	# resolve Timer
+	timer = Game.getWorld().get_node(\"Timer\")
+
+func target_destroyed(target):
+	Game.verbose(get_name() + ': Target destroyed')
+	find_new_target()
+
+func get_name():
+	return Game.playerDefinitions[ownerIdx].name + \".army.\" + str(id)
+
+func catch_structure(structure):
+	pass
+
+func catch_transport(transport):
+	tween.remove(transport, \"position\")
+
+func catch_army(army):
+	tween.remove(army, \"position\")
+
+func destroy():
+	Game.verbose(get_name() + \": Destroy\")
+	stop_attacking()
+	tween.remove(self, \"position\")
+	# Game.getWorld().get_node('Map/Armies').remove(self)
+	queue_free()
+	pass
+
+func is_attacking():
+	return attackTarget != null
+
+func stop_attacking():
+	if attackTarget:
+		Game.verbose(get_name() + \": Stop attacking \" + attackTarget.get_name())
+		attackTarget = null
+		timer.disconnect('timeout', self, '_timeout')
+		dc = true
+
+func start_attacking(body):
+	Game.verbose(get_name() + \": Start attacking \" + body.get_name())
+	if attackTarget == null:
+		# stop moving 
+		tween.remove(self, \"position\")
+		# connect to the timer
+		timer.connect('timeout', self, '_timeout')
+		dc = false
+	# select current attacking element
+	attackTarget = body
+
+func find_new_target():
+	stop_attacking()
+	var target = Game.getWorld().army_find_target(self)
+	if target == null:
+		return
+	# setup new target
+	Moveable.assign_target(target)
+	if overlaps_area(target):
+		# target is in range
+		start_attacking(target)
+		return
+	# start moving to the target
+	Game.getWorld()._calculate_move_tween(self)
+
+func _timeout():
+	Game.verbose(get_name() + ': timeout')
+	if dc: return # Phase of not connected to timer, but call possible in same step
+	if attackTarget and not attackTarget.Destructable.is_destroyed():
+		Game.verbose(get_name() + ': hit ' + attackTarget.get_name())
+		attackTarget.Destructable.hit(5)
+	else:
+		find_new_target()
+
+func _body_entered(body):
+	if body.ownerIdx == ownerIdx:
+		return
+	
+	if body.is_in_group(\"Structure\"):
+		catch_structure(body)
+	elif body.is_in_group(\"Transport\"):
+		catch_transport(body)
+	elif body.is_in_group(\"Army\"):
+		catch_army(body)
+	else:
+		return
+	
+	# if attackTarget: stop_attacking()
+	Moveable.assign_target(body)
+	start_attacking(body)
+"
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="ShaderMaterial" id=2]
+
+render_priority = 0
+shader = ExtResource( 1 )
+shader_param/color = Plane( 1, 0, 0, 1 )
+shader_param/size = 0.5
+shader_param/borderSize = 0.08
+shader_param/borderColor = Plane( 1, 1, 1, 1 )
+shader_param/secondBorderSize = 0.0
+shader_param/secondBorderColor = null
+_sections_unfolded = [ "shader_param" ]
+
+[sub_resource type="ImageTexture" id=3]
+
+flags = 7
+storage = 0
+lossy_quality = 0.7
+flags = 7
+size = Vector2( 20, 20 )
+
+[sub_resource type="RectangleShape2D" id=4]
+
+custom_solver_bias = 0.0
+extents = Vector2( 15, 15 )
+
+[node name="Army" type="Area2D" index="0" groups=[
+"Army",
+]]
+
+position = Vector2( 481.849, 70.1479 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 1 )
+_sections_unfolded = [ "Collision" ]
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Sprite" type="Sprite" parent="." index="0"]
+
+material = SubResource( 2 )
+texture = SubResource( 3 )
+_sections_unfolded = [ "Material" ]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="1"]
+
+shape = SubResource( 4 )
+_sections_unfolded = [ "Transform" ]
+
+

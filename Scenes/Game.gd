@@ -5,10 +5,17 @@ enum RESOURCE {MANPOWER, FOOD, ARMY, AIRPLANE}
 enum PLANE{FIGHTER, BOMBER}
 
 var timetick = 0
+var armyId = 0 setget ,get_army_id
+# Scenes
+var Structure
+var Transport
+var Squad
+var Army
+
+# Objects
 var AirPlane = preload('res://Objects/AirPlane.gd')
 
 # interfaces
-var Targetable = preload('res://Interfaces/Targetable.gd')
 var Moveable = preload('res://Interfaces/Moveable.gd')
 var PlaneHolder = preload('res://Interfaces/PlaneHolder.gd')
 var Destructable = preload('res://Interfaces/Destructable.gd')
@@ -17,6 +24,7 @@ var Producer = preload('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
 		verbose = true,
+		loggers = [],
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
@@ -31,6 +39,7 @@ const TEST_CONFIGURATION = {
 
 const GAME_CONFIGURATION = {
 		verbose = false,
+		loggers = [],
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
@@ -52,6 +61,10 @@ const playerDefinitions = []
 const MAP_WIDTH = 1024
 const MAP_HEIGHT = 600
 
+func get_army_id():
+	armyId += 1
+	return armyId
+
 func create(temporary):
 	var result = temporary.duplicate()
 	var props = result.get_property_list()
@@ -59,7 +72,6 @@ func create(temporary):
 		match prop.name:
 			'Moveable': result.Moveable = Moveable.new(result)
 			'Destructable': result.Destructable = Destructable.new(result)
-			'Targetable': result.Targetable = Targetable.new(result)
 	return result
 
 func verbose(msg):
@@ -149,4 +161,9 @@ func _ready():
 			color = Color(0.6, 0.0, 0.2, 0.5)
 	})
 
+	# Scenes
+	Structure = load('res://Objects/Structure.tscn').instance()
+	Transport = load('res://Objects/Transport.tscn').instance()
+	Squad = load('res://Objects/Squad.tscn').instance()
+	Army = load('res://Objects/Army.tscn').instance()
 	pass

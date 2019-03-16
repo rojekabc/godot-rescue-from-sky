@@ -1,3 +1,5 @@
+var LOG = Game.CONFIGURATION.loggers.has('Producer')
+
 var object
 
 var produces = {}
@@ -30,6 +32,8 @@ func add_consumer(resource, consumer):
 		produce.consumers.append(consumer)
 
 func timeout():
+	if object.Destructable.is_destroyed():
+		return
 	for produce in produces.values():
 		_produced_resource_timeout(produce)
 
@@ -48,7 +52,7 @@ func _produced_resource_produce_tick(produce):
 	if produce.timeout == 0:
 		produce.has = true
 		produce.producing = false
-		Game.verbose(
+		if LOG: Game.verbose(
 			object.get_name()
 			+ " produced " + Game.resourceDefinitions[produce.resource].name)
 	pass
@@ -70,7 +74,7 @@ func _produced_resource_start_production(produce):
 	# start produce
 	produce.producing = true
 	produce.timeout = resDef.timeout
-	Game.verbose(
+	if LOG: Game.verbose(
 		object.get_name()
 		 + " start production of " + Game.resourceDefinitions[produce.resource].name)
 
@@ -78,7 +82,7 @@ func _produced_resource_distribute(produce):
 	for consumer in produce.consumers:
 		if not consumer.Consumer.can_send(produce.resource):
 			continue
-		Game.verbose(
+		if LOG: Game.verbose(
 			object.get_name()
 			+ " send " + Game.resourceDefinitions[produce.resource].name
 			+ " to " + consumer.get_name())

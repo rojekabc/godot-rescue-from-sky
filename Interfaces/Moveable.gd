@@ -1,7 +1,6 @@
 var object
 
 var source = null
-# Targetable
 var target = null
 var speed
 
@@ -11,20 +10,22 @@ func _init(object):
 
 func assign(source, target):
 	self.source = source
-	self.target = target
-	target.Targetable.add(object)
+	assign_target(target)
 
-func stop_targeting():
-	var targetable = target.get('Targetable')
-	if targetable:
-		targetable.remove(object)
-	target = null
+func assign_target(target):
+	if self.target == target or target == null:
+		return
+	var hasMethod = object.has_method('target_destroyed')
+	if hasMethod and (self.target != null):
+		self.target.disconnect('object_destroyed', object, 'target_destroyed')
+		Game.verbose(object.get_name() + ": remove target " + self.target.get_name())
+	self.target = target
+	if hasMethod:
+		self.target.connect('object_destroyed', object, 'target_destroyed')
+	Game.verbose(object.get_name() + ": set target " + self.target.get_name())
 
 func move_home():
-	target = source
-	var targetable = target.get('Targetable')
-	if targetable:
-		targetable.add(object)
+	assign_target(source)
 
 func is_home():
 	return target == source

@@ -1,0 +1,180 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
+
+[sub_resource type="GDScript" id=1]
+
+resource_name = "Squad"
+script/source = "extends Area2D
+
+var ownerIdx
+var type
+
+var Moveable
+# var Targetable
+var PlaneHolder
+
+signal object_destroyed(object)
+signal update_planes(object, planesData)
+
+func _ready():
+	if get_parent().get_name() == 'Templates':
+		return
+	# structures
+	connect('body_entered', self, '_body_entered')
+	# transorts
+	connect('area_entered', self, '_body_entered')
+	pass
+
+func _init():
+	Moveable = Game.Moveable.new(self)
+#	Targetable = Game.Targetable.new(self)
+	PlaneHolder = Game.PlaneHolder.new(self)
+	connect('update_planes', self, '_update_planes')
+
+func target_destroyed(target):
+	Game.verbose(get_name() + ': Target destroyed')
+	Moveable.move_home()
+
+func _update_planes(object, planesData):
+	type = Game.FIGHTER
+	for plane in planesData:
+		if plane.type == Game.BOMBER:
+			type = Game.BOMBER
+			break
+	if type == Game.FIGHTER:
+		Moveable.speed = Game.CONFIGURATION.fighterSquadSpeed
+	else:
+		Moveable.speed =  Game.CONFIGURATION.bomberSquadSpeed
+	pass
+
+func clean():
+	emit_signal('object_destroyed', self)
+	queue_free()
+
+func catch_target():
+	if Moveable.is_home():
+		PlaneHolder.move_planes(Moveable.source)
+		Game.verbose('Squad landing')
+		clean()
+	else:
+		attack_target()
+		Moveable.move_home()
+
+func attack_target():
+	var target = Moveable.target
+	if target.is_in_group('Structure'):
+		attack_structure()
+	elif target.is_in_group('Transport'):
+		attack_transport()
+	elif target.is_in_group('Squad'):
+		attack_squad()
+
+func attack_structure():
+	for plane in PlaneHolder.planes:
+		if plane.type == Game.BOMBER:
+			Moveable.hit_target(Game.CONFIGURATION.squadStructureBombardHitPoints)
+
+func attack_transport():
+	for plane in PlaneHolder.planes:
+		if can_bombard_transport(plane):
+			Moveable.hit_target(100)
+
+func can_bombard_transport(plane):
+	return plane.type == Game.BOMBER and (randi() % 100 <= Game.CONFIGURATION.squadTransportBombardDestoryChance)
+
+func attack_squad():
+	var squadPlanes = PlaneHolder.planes
+	var targetPlanes = Moveable.get_target_planes()
+	
+	# Algorithm - hit random from oposite side
+	attack_planes(squadPlanes, targetPlanes)
+	attack_planes(targetPlanes, squadPlanes)
+	# destroy planes, which has 0 hit points
+	remove_destroyed_planes(squadPlanes)
+	remove_destroyed_planes(targetPlanes)
+	# validate squads
+	if squadPlanes.empty():
+		clean()
+	if targetPlanes.empty():
+		Moveable.target.clean()
+
+func remove_destroyed_planes(squadPlanes):
+	var destroyed = []
+	for plane in squadPlanes:
+		if plane.Destructable.is_destroyed():
+			destroyed.append(plane)
+	for plane in destroyed:
+		squadPlanes.erase(plane)
+
+func attack_planes(squadPlanes, targetPlanes):
+	for plane in squadPlanes:
+		var targetPlane = targetPlanes[randi() % targetPlanes.size()]
+		var hitPoints
+		if plane.type == Game.BOMBER:
+			hitPoints = Game.CONFIGURATION.squadBomberHitPoints
+		elif plane.type == Game.FIGHTER:
+			hitPoints = Game.CONFIGURATION.squadFighterHitPoints
+		targetPlane.Destructable.hit(hitPoints)
+
+func get_type():
+	return type
+
+func _body_entered(body):
+	if Moveable.target == body:
+		catch_target()
+		pass
+		
+	pass
+"
+_sections_unfolded = [ "Resource" ]
+
+[sub_resource type="ShaderMaterial" id=2]
+
+render_priority = 0
+shader = ExtResource( 1 )
+shader_param/color = Plane( 0.8, 0, 0, 0.6 )
+_sections_unfolded = [ "shader_param" ]
+
+[sub_resource type="ImageTexture" id=3]
+
+flags = 7
+storage = 0
+lossy_quality = 0.7
+flags = 7
+size = Vector2( 30, 30 )
+
+[sub_resource type="RectangleShape2D" id=4]
+
+custom_solver_bias = 0.0
+extents = Vector2( 15, 15 )
+
+[node name="Squad" type="Area2D" groups=[
+"Squad",
+]]
+
+position = Vector2( 349.767, 72.1741 )
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = SubResource( 1 )
+_sections_unfolded = [ "Collision" ]
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Sprite" type="Sprite" parent="." index="0"]
+
+material = SubResource( 2 )
+texture = SubResource( 3 )
+_sections_unfolded = [ "Material" ]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="1"]
+
+shape = SubResource( 4 )
+
+
