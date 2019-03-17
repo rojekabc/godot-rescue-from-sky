@@ -6,7 +6,12 @@
 ;   [section] ; section goes between []
 ;   param=value ; assign values to parameters
 
-config_version=3
+config_version=4
+
+_global_script_classes=[  ]
+_global_script_class_icons={
+
+}
 
 [application]
 
@@ -19,6 +24,11 @@ config/icon="res://icon.png"
 Tool="*res://Scenes/Tool.gd"
 Game="*res://Scenes/Game.gd"
 
+[debug]
+
+gdscript/warnings/enable=false
+
 [rendering]
 
+quality/driver/driver_name="GLES2"
 environment/default_environment="res://default_env.tres"

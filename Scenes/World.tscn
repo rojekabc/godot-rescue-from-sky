@@ -6,9 +6,8 @@
 [ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=4]
 
 [sub_resource type="GDScript" id=1]
-
 resource_name = "World"
-script/source = "extends Node
+script/source = "extends Node2D
 
 var selectTarget = null
 
@@ -87,7 +86,7 @@ func _select_target_action(globalPosition):
 const COLLISION_MASK = 1
 func _find_element_at(globalPosition):
 	var selected = null
-	var results = get_world_2d().direct_space_state.intersect_point(globalPosition, 4, [], COLLISION_MASK)
+	var results = get_world_2d().direct_space_state.intersect_point(globalPosition, 4, [], COLLISION_MASK, true, true)
 	if results:
 		for result in results:
 			var collider = result.collider
@@ -133,9 +132,9 @@ func _map_create():
 	for ownerIdx in range(2):
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
-			if structure.type == Game.AIRPORT:
-				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.FIGHTER))
-				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.BOMBER))
+			if structure.type == Game.STRUCTURE.AIRPORT:
+				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.PLANE.FIGHTER))
+				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.PLANE.BOMBER))
 			while not _find_structures_at(structure.get_corners()).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx)
@@ -215,13 +214,16 @@ func transport_start(sourceStructure, targetStructure, transportedResource):
 		transport.complete()
 		return
 	transport.visible = true
+	transport.position = sourceStructure.position
 	$Map/Transports.add_child(transport)
 	var distance = (targetStructure.position - sourceStructure.position).length()
+	var time = distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time
 	$Tween.interpolate_property(
 		transport, \"position\",
 		sourceStructure.position, targetStructure.position,
-		distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time,
+		time,
 		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+	$Tween.start()
 
 func _calculate_move_tween(moveObject):
 	var move = moveObject.Moveable.calculate_move()
@@ -314,10 +316,8 @@ func army_start(source, target):
 	_calculate_move_tween(army)
 	pass
 	"
-_sections_unfolded = [ "Resource" ]
 
 [sub_resource type="GDScript" id=2]
-
 resource_name = "UISquad"
 script/source = "extends PanelContainer
 
@@ -387,7 +387,7 @@ func clear_planes():
 
 func append_plane(plane):
 	var checkbox = CheckBox.new()
-	if plane.type == Game.FIGHTER:
+	if plane.type == Game.PLANE.FIGHTER:
 		checkbox.text = 'Fighter'
 	else:
 		checkbox.text = 'Bomber'
@@ -409,10 +409,9 @@ func set_airport(airport):
 	append_planes(self.airport.PlaneHolder.planes)
 	pass
 "
-_sections_unfolded = [ "Resource" ]
 
 [sub_resource type="GDScript" id=3]
-
+resource_name = "Status"
 script/source = "extends Label
 
 var startTick
@@ -447,286 +446,109 @@ func info(msg):
 func fail(msg):
 	_status(msg, FAIL_COLOR)
 "
-_sections_unfolded = [ "Resource" ]
 
-[node name="World" type="Node2D" index="0"]
-
+[node name="World" type="Node2D"]
 script = SubResource( 1 )
 
-[node name="Map" type="Node" parent="." index="0"]
+[node name="Map" type="Node2D" parent="."]
 
-[node name="Structures" type="Node" parent="Map" index="0"]
+[node name="Structures" type="Node2D" parent="Map"]
 
-[node name="Squads" type="Node" parent="Map" index="1"]
+[node name="Squads" type="Node2D" parent="Map"]
 
-[node name="Transports" type="Node" parent="Map" index="2"]
+[node name="Transports" type="Node2D" parent="Map"]
 
-[node name="Armies" type="Node" parent="Map" index="3"]
+[node name="Armies" type="Node2D" parent="Map"]
 
-[node name="UI" type="Container" parent="Map" index="4"]
-
-editor/display_folded = true
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="UI" type="Control" parent="Map"]
 margin_right = 1024.0
 margin_bottom = 600.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 0
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
-_sections_unfolded = [ "Rect" ]
 
-[node name="Suqad" type="PanelContainer" parent="Map/UI" index="0"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Suqad" type="PanelContainer" parent="Map/UI"]
+editor/display_folded = true
 margin_left = 377.0
 margin_top = 180.0
 margin_right = 643.0
 margin_bottom = 449.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 0
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
 custom_styles/panel = ExtResource( 1 )
 script = SubResource( 2 )
-_sections_unfolded = [ "Visibility", "custom_styles" ]
 __meta__ = {
 "_edit_group_": true
 }
 
-[node name="Container" type="VBoxContainer" parent="Map/UI/Suqad" index="0"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Container" type="VBoxContainer" parent="Map/UI/Suqad"]
 margin_left = 10.0
 margin_top = 10.0
 margin_right = 256.0
 margin_bottom = 259.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 1
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
-alignment = 0
 
-[node name="Title" type="Label" parent="Map/UI/Suqad/Container" index="0"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Title" type="Label" parent="Map/UI/Suqad/Container"]
 margin_right = 246.0
 margin_bottom = 45.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
 mouse_filter = 1
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 4
 custom_styles/normal = ExtResource( 2 )
 custom_fonts/font = ExtResource( 3 )
 text = "Squad"
 align = 1
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
-_sections_unfolded = [ "Mouse", "custom_fonts", "custom_styles" ]
 
-[node name="Columns" type="HBoxContainer" parent="Map/UI/Suqad/Container" index="1"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Columns" type="HBoxContainer" parent="Map/UI/Suqad/Container"]
 margin_top = 49.0
 margin_right = 246.0
 margin_bottom = 249.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 1
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
-alignment = 0
 
-[node name="Planes" type="ScrollContainer" parent="Map/UI/Suqad/Container/Columns" index="0"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Planes" type="ScrollContainer" parent="Map/UI/Suqad/Container/Columns"]
 margin_right = 171.0
 margin_bottom = 200.0
 rect_min_size = Vector2( 150, 200 )
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = true
-mouse_filter = 0
-mouse_default_cursor_shape = 0
 size_flags_horizontal = 3
-size_flags_vertical = 1
-scroll_horizontal_enabled = true
-scroll_horizontal = 0
-scroll_vertical_enabled = true
-scroll_vertical = 0
-scroll_deadzone = 0
-_sections_unfolded = [ "Rect", "Size Flags" ]
 
-[node name="Container" type="VBoxContainer" parent="Map/UI/Suqad/Container/Columns/Planes" index="0"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Container" type="VBoxContainer" parent="Map/UI/Suqad/Container/Columns/Planes"]
 margin_right = 171.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 1
-mouse_default_cursor_shape = 0
 size_flags_horizontal = 3
-size_flags_vertical = 1
-alignment = 0
-_sections_unfolded = [ "Size Flags" ]
 
-[node name="Actions" type="VBoxContainer" parent="Map/UI/Suqad/Container/Columns" index="1"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Actions" type="VBoxContainer" parent="Map/UI/Suqad/Container/Columns"]
 margin_left = 175.0
 margin_right = 246.0
 margin_bottom = 200.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 1
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
-alignment = 0
 
-[node name="Target" type="Button" parent="Map/UI/Suqad/Container/Columns/Actions" index="0"]
-
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
+[node name="Target" type="Button" parent="Map/UI/Suqad/Container/Columns/Actions"]
 margin_right = 71.0
 margin_bottom = 33.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-focus_mode = 2
-mouse_filter = 0
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
 custom_fonts/font = ExtResource( 4 )
-toggle_mode = false
-enabled_focus_mode = 2
-shortcut = null
-group = null
 text = "Target"
-flat = false
-align = 1
-_sections_unfolded = [ "custom_fonts" ]
 
-[node name="Patrol" type="Button" parent="Map/UI/Suqad/Container/Columns/Actions" index="1"]
-
+[node name="Patrol" type="Button" parent="Map/UI/Suqad/Container/Columns/Actions"]
 visible = false
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
 margin_top = 37.0
 margin_right = 71.0
 margin_bottom = 70.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-focus_mode = 2
-mouse_filter = 0
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 1
 custom_fonts/font = ExtResource( 4 )
-toggle_mode = false
-enabled_focus_mode = 2
-shortcut = null
-group = null
 text = "Patrol"
-flat = false
-align = 1
-_sections_unfolded = [ "custom_fonts" ]
 
-[node name="Status" type="Label" parent="Map/UI" index="1"]
-
-anchor_left = 0.0
+[node name="Status" type="Label" parent="Map/UI"]
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_top = -90.0
-margin_bottom = -50.0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 2
-mouse_default_cursor_shape = 0
+margin_left = -1.0
+margin_top = -42.0
+margin_right = -1.0
+margin_bottom = -2.0
 size_flags_horizontal = 3
-size_flags_vertical = 4
 custom_fonts/font = ExtResource( 4 )
 text = "Status message"
 align = 1
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
 script = SubResource( 3 )
-_sections_unfolded = [ "Anchor", "Margin", "Rect", "Size Flags", "Visibility", "custom_fonts" ]
 
-[node name="Label" type="Label" parent="Map" index="5"]
-
-anchor_left = 0.0
-anchor_top = 0.0
+[node name="Label" type="Label" parent="Map/UI"]
 anchor_right = 1.0
-anchor_bottom = 0.0
-margin_left = 963.0
+margin_left = 857.0
+margin_right = 984.0
 margin_bottom = 15.0
 grow_horizontal = 0
-rect_pivot_offset = Vector2( 0, 0 )
-rect_clip_content = false
-mouse_filter = 2
-mouse_default_cursor_shape = 0
-size_flags_horizontal = 1
-size_flags_vertical = 4
 text = " v1.1.0 \"Armies go to war\""
-percent_visible = 1.0
-lines_skipped = 0
-max_lines_visible = -1
-_sections_unfolded = [ "Anchor", "Grow Direction", "Margin" ]
 
-[node name="Timer" type="Timer" parent="." index="1"]
-
-process_mode = 1
-wait_time = 1.0
-one_shot = false
+[node name="Timer" type="Timer" parent="."]
 autostart = true
 
-[node name="Tween" type="Tween" parent="." index="2"]
-
-repeat = false
-playback_process_mode = 1
-playback_speed = 1.0
-playback/active = false
-playback/repeat = false
-playback/speed = 1.0
-_sections_unfolded = [ "playback" ]
-
+[node name="Tween" type="Tween" parent="."]
 

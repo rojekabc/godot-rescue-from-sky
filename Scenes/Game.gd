@@ -13,13 +13,17 @@ var Squad
 var Army
 
 # Objects
+#warning-ignore:unused_class_variable
 var AirPlane = preload('res://Objects/AirPlane.gd')
 
 # interfaces
 var Moveable = preload('res://Interfaces/Moveable.gd')
+#warning-ignore:unused_class_variable
 var PlaneHolder = preload('res://Interfaces/PlaneHolder.gd')
 var Destructable = preload('res://Interfaces/Destructable.gd')
+#warning-ignore:unused_class_variable
 var Consumer = preload('res://Interfaces/Consumer.gd')
+#warning-ignore:unused_class_variable
 var Producer = preload('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
@@ -85,70 +89,70 @@ func getTimer():
 	return get_tree().get_root().get_node('World/Timer')
 
 func _ready():
-	structureDefinitions[CITY] = {
+	structureDefinitions[STRUCTURE.CITY] = {
 		name = 'City',
-		type = CITY,
+		type = STRUCTURE.CITY,
 		acronym = 'C',
-		consumes = [FOOD],
-		produces = [MANPOWER]
+		consumes = [RESOURCE.FOOD],
+		produces = [RESOURCE.MANPOWER]
 	}
-	structureDefinitions[VILLAGE] = {
+	structureDefinitions[STRUCTURE.VILLAGE] = {
 		name = 'Village',
-		type = VILLAGE,
+		type = STRUCTURE.VILLAGE,
 		acronym = 'V',
 		consumes = [],
-		produces = [FOOD]
+		produces = [RESOURCE.FOOD]
 	}
-	structureDefinitions[BUNKER] = {
+	structureDefinitions[STRUCTURE.BUNKER] = {
 		name = 'Bunker',
-		type = BUNKER,
+		type = STRUCTURE.BUNKER,
 		acronym = 'B',
-		consumes = [FOOD, MANPOWER],
-		produces = [ARMY]
+		consumes = [RESOURCE.FOOD, RESOURCE.MANPOWER],
+		produces = [RESOURCE.ARMY]
 	}
-	structureDefinitions[AIRPORT] = {
+	structureDefinitions[STRUCTURE.AIRPORT] = {
 		name = 'Airport',
-		type = AIRPORT,
+		type = STRUCTURE.AIRPORT,
 		acronym = 'A',
-		consumes = [AIRPLANE],
+		consumes = [RESOURCE.AIRPLANE],
 		produces = []
 	}
-	structureDefinitions[FACTORY] = {
+	structureDefinitions[STRUCTURE.FACTORY] = {
 		name = 'Factory',
-		type = FACTORY,
+		type = STRUCTURE.FACTORY,
 		acronym = 'F',
-		consumes = [MANPOWER],
-		produces = [AIRPLANE]
+		consumes = [RESOURCE.MANPOWER],
+		produces = [RESOURCE.AIRPLANE]
 	}
-	structureDefinitions[CAPITAL] = {
+	structureDefinitions[STRUCTURE.CAPITAL] = {
 		name = 'Capital HQ',
-		type = CAPITAL,
+		type = STRUCTURE.CAPITAL,
 		acronym = 'HQ',
-		consumes = [FOOD, MANPOWER],
-		produces = [MANPOWER, ARMY]
+		consumes = [RESOURCE.FOOD, RESOURCE.MANPOWER],
+		produces = [RESOURCE.MANPOWER, RESOURCE.ARMY]
 	}
 	
-	resourceDefinitions[MANPOWER] = {
+	resourceDefinitions[RESOURCE.MANPOWER] = {
 		name = 'Manpower',
-		consumes = [FOOD],
+		consumes = [RESOURCE.FOOD],
 		timeout = 5,
 		acronym = 'Mp'
 	}
-	resourceDefinitions[FOOD] = {
+	resourceDefinitions[RESOURCE.FOOD] = {
 		name = 'Food',
 		consumes = [],
 		timeout = 1,
 		acronym = 'F'
 	}
-	resourceDefinitions[ARMY] = {
+	resourceDefinitions[RESOURCE.ARMY] = {
 		name = 'Army',
-		consumes = [MANPOWER, FOOD],
+		consumes = [RESOURCE.MANPOWER, RESOURCE.FOOD],
 		timeout = 10,
 		acronym = 'A'
 	}
-	resourceDefinitions[AIRPLANE] = {
+	resourceDefinitions[RESOURCE.AIRPLANE] = {
 		name = 'Airplane',
-		consumes = [MANPOWER],
+		consumes = [RESOURCE.MANPOWER],
 		timeout = 20,
 		acronym = 'Ap'
 	}

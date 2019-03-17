@@ -86,7 +86,7 @@ func _produced_resource_distribute(produce):
 			object.get_name()
 			+ " send " + Game.resourceDefinitions[produce.resource].name
 			+ " to " + consumer.get_name())
-		var transport = Game.getWorld().transport_start(object, consumer, produce.resource)
+		Game.getWorld().transport_start(object, consumer, produce.resource)
 		produce.has = false
 		consumer.Consumer.wait(produce.resource)
 		break

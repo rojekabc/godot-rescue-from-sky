@@ -3,7 +3,6 @@
 [ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
 
 [sub_resource type="GDScript" id=1]
-
 resource_name = "Army"
 script/source = "extends Area2D
 
@@ -56,6 +55,7 @@ func catch_army(army):
 
 func destroy():
 	Game.verbose(get_name() + \": Destroy\")
+	emit_signal('object_destroyed', self)
 	stop_attacking()
 	tween.remove(self, \"position\")
 	# Game.getWorld().get_node('Map/Armies').remove(self)
@@ -123,60 +123,37 @@ func _body_entered(body):
 	Moveable.assign_target(body)
 	start_attacking(body)
 "
-_sections_unfolded = [ "Resource" ]
 
 [sub_resource type="ShaderMaterial" id=2]
-
-render_priority = 0
 shader = ExtResource( 1 )
 shader_param/color = Plane( 1, 0, 0, 1 )
 shader_param/size = 0.5
 shader_param/borderSize = 0.08
 shader_param/borderColor = Plane( 1, 1, 1, 1 )
 shader_param/secondBorderSize = 0.0
-shader_param/secondBorderColor = null
-_sections_unfolded = [ "shader_param" ]
+shader_param/secondBorderColor = Plane( 0, 0, 0, 1 )
 
 [sub_resource type="ImageTexture" id=3]
-
-flags = 7
-storage = 0
-lossy_quality = 0.7
-flags = 7
+flags = 0
+flags = 0
 size = Vector2( 20, 20 )
 
 [sub_resource type="RectangleShape2D" id=4]
-
-custom_solver_bias = 0.0
 extents = Vector2( 15, 15 )
 
-[node name="Army" type="Area2D" index="0" groups=[
+[node name="Army" type="Area2D" groups=[
 "Army",
 ]]
-
 position = Vector2( 481.849, 70.1479 )
-input_pickable = true
-gravity_vec = Vector2( 0, 1 )
-gravity = 98.0
-linear_damp = 0.1
-angular_damp = 1.0
-audio_bus_override = false
-audio_bus_name = "Master"
 script = SubResource( 1 )
-_sections_unfolded = [ "Collision" ]
 __meta__ = {
 "_edit_group_": true
 }
 
-[node name="Sprite" type="Sprite" parent="." index="0"]
-
+[node name="Sprite" type="Sprite" parent="."]
 material = SubResource( 2 )
 texture = SubResource( 3 )
-_sections_unfolded = [ "Material" ]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="1"]
-
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource( 4 )
-_sections_unfolded = [ "Transform" ]
-
 

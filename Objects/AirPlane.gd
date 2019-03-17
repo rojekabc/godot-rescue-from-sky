@@ -5,6 +5,9 @@ var Destructable
 
 signal object_destroyed(object)
 
+func destroy():
+	emit_signal('object_destroyed', self)
+
 func _init(ownerIdx, airplaneType):
 	self.type = airplaneType
 	self.ownerIdx = ownerIdx

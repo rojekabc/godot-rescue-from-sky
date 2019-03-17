@@ -22,6 +22,5 @@ func hit(points):
 	else:
 		Game.verbose('Hit ' + str(points) + ' points to ' + object.get_name() + ' and destroyed')
 		hp = 0
-		object.emit_signal('object_destroyed', object)
 		if destroyFunc and object.has_method(destroyFunc):
 			object.call(destroyFunc)
