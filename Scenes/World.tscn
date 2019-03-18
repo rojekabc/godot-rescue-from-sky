@@ -10,7 +10,6 @@ resource_name = "World"
 script/source = "extends Node2D
 
 var selectTarget = null
-
 func _ready():
 	# Enable randomization
 	randomize()

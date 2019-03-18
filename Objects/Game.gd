@@ -166,8 +166,8 @@ func _ready():
 	})
 
 	# Scenes
-	Structure = load('res://Objects/Structure.tscn').instance()
-	Transport = load('res://Objects/Transport.tscn').instance()
-	Squad = load('res://Objects/Squad.tscn').instance()
-	Army = load('res://Objects/Army.tscn').instance()
+	Structure = load('res://Scenes/Structure.tscn').instance()
+	Transport = load('res://Scenes/Transport.tscn').instance()
+	Squad = load('res://Scenes/Squad.tscn').instance()
+	Army = load('res://Scenes/Army.tscn').instance()
 	pass

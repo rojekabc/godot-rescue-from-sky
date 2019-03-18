@@ -21,8 +21,8 @@ config/icon="res://icon.png"
 
 [autoload]
 
-Tool="*res://Scenes/Tool.gd"
-Game="*res://Scenes/Game.gd"
+Tool="*res://Objects/Tool.gd"
+Game="*res://Objects/Game.gd"
 
 [debug]
 
