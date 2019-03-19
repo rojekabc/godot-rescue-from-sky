@@ -136,7 +136,7 @@ func _ready():
 		name = 'Manpower',
 		consumes = [RESOURCE.FOOD],
 		timeout = 5,
-		acronym = 'Mp'
+		acronym = 'M'
 	}
 	resourceDefinitions[RESOURCE.FOOD] = {
 		name = 'Food',
@@ -148,13 +148,13 @@ func _ready():
 		name = 'Army',
 		consumes = [RESOURCE.MANPOWER, RESOURCE.FOOD],
 		timeout = 10,
-		acronym = 'A'
+		acronym = 'S'
 	}
 	resourceDefinitions[RESOURCE.AIRPLANE] = {
 		name = 'Airplane',
 		consumes = [RESOURCE.MANPOWER],
 		timeout = 20,
-		acronym = 'Ap'
+		acronym = 'A'
 	}
 	playerDefinitions.append({
 			name = 'Zygfryd',

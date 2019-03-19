@@ -121,6 +121,9 @@ func _prepare_materials():
 		playerDefinition.structureMaterial.set('shader_param/color', playerDefinition.color)
 		playerDefinition.armyMaterial = Game.Army.get_node('Sprite').material.duplicate()
 		playerDefinition.armyMaterial.set('shader_param/color', playerDefinition.color)
+		playerDefinition.transportMaterial = Game.Transport.get_node('Sprite').material.duplicate()
+		playerDefinition.transportMaterial.set('shader_param/color', playerDefinition.color)
+		
 
 func _timeout():
 	Game.timetick += 1
@@ -541,7 +544,6 @@ script = SubResource( 3 )
 [node name="Label" type="Label" parent="Map/UI"]
 anchor_right = 1.0
 margin_left = 857.0
-margin_right = 984.0
 margin_bottom = 15.0
 grow_horizontal = 0
 text = " v1.1.0 \"Armies go to war\""

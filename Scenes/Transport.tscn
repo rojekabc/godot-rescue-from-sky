@@ -1,7 +1,8 @@
 [gd_scene load_steps=7 format=2]
 
-[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
-[ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=2]
+[ext_resource path="res://Resources/TransportCircle.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/Transport.png" type="Texture" id=2]
+[ext_resource path="res://Resources/TransportFont.tres" type="DynamicFont" id=3]
 
 [sub_resource type="GDScript" id=1]
 resource_name = "Transport"
@@ -27,6 +28,10 @@ func setup(sourceStructure, targetStructure, transportedResource):
 	Moveable.assign(sourceStructure, targetStructure)
 	Destructable.assign()
 	$Acronym.text = Game.resourceDefinitions[resource].acronym
+	# $Acronym.text = ''
+	$Sprite.material = Game.playerDefinitions[ownerIdx].transportMaterial
+	# $Sprite.material.set('shader_param/image', load(Game.resourceDefinitions[resource].texture))
+	# $Sprite.material.set('shader_param/color', Game.playerDefinitions[ownerIdx].color)
 	pass
 
 func _ready():
@@ -69,20 +74,14 @@ func complete():
 
 [sub_resource type="ShaderMaterial" id=2]
 shader = ExtResource( 1 )
-shader_param/color = Plane( 0.4, 0.8, 0.1, 0.6 )
+shader_param/color = Plane( 1, 0, 1, 1 )
 
-[sub_resource type="ImageTexture" id=3]
-flags = 0
-flags = 0
-size = Vector2( 30, 30 )
-
-[sub_resource type="RectangleShape2D" id=4]
+[sub_resource type="RectangleShape2D" id=3]
 extents = Vector2( 15, 15 )
 
 [node name="Trasnport" type="Area2D" groups=[
 "Transport",
 ]]
-position = Vector2( 199.009, 84.3346 )
 collision_mask = 0
 script = SubResource( 1 )
 __meta__ = {
@@ -91,17 +90,19 @@ __meta__ = {
 
 [node name="Sprite" type="Sprite" parent="."]
 material = SubResource( 2 )
-texture = SubResource( 3 )
+texture = ExtResource( 2 )
 
 [node name="Collision" type="CollisionShape2D" parent="."]
-shape = SubResource( 4 )
+visible = false
+shape = SubResource( 3 )
 
 [node name="Acronym" type="Label" parent="."]
 margin_left = -15.0
-margin_top = -14.0
+margin_top = -12.0
 margin_right = 16.0
-margin_bottom = 18.0
-custom_fonts/font = ExtResource( 2 )
+margin_bottom = 15.0
+custom_fonts/font = ExtResource( 3 )
 text = "X"
 align = 1
+valign = 1
 
