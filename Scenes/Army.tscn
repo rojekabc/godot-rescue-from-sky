@@ -1,6 +1,7 @@
 [gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/Army20.png" type="Texture" id=2]
 
 [sub_resource type="GDScript" id=1]
 resource_name = "Army"
@@ -71,6 +72,7 @@ func stop_attacking():
 		attackTarget = null
 		timer.disconnect('timeout', self, '_timeout')
 		dc = true
+		$Sprite.texture = load('res://Resources/Army20.png')
 
 func start_attacking(body):
 	Game.verbose(get_name() + \": Start attacking \" + body.get_name())
@@ -80,8 +82,13 @@ func start_attacking(body):
 		# connect to the timer
 		timer.connect('timeout', self, '_timeout')
 		dc = false
+		$Sprite.texture = load('res://Resources/ArmyFight.png')
 	# select current attacking element
 	attackTarget = body
+
+func assign_target(target):
+	Moveable.assign_target(target)
+	$Sprite.rotation_degrees = Moveable.get_rotation_degrees()
 
 func find_new_target():
 	stop_attacking()
@@ -89,7 +96,7 @@ func find_new_target():
 	if target == null:
 		return
 	# setup new target
-	Moveable.assign_target(target)
+	assign_target(target)
 	if overlaps_area(target):
 		# target is in range
 		start_attacking(target)
@@ -119,32 +126,24 @@ func _body_entered(body):
 	else:
 		return
 	
+	if body.Destructable.is_destroyed():
+		return
+	
 	# if attackTarget: stop_attacking()
-	Moveable.assign_target(body)
+	assign_target( body )
 	start_attacking(body)
 "
 
 [sub_resource type="ShaderMaterial" id=2]
 shader = ExtResource( 1 )
 shader_param/color = Plane( 1, 0, 0, 1 )
-shader_param/size = 0.5
-shader_param/borderSize = 0.08
-shader_param/borderColor = Plane( 1, 1, 1, 1 )
-shader_param/secondBorderSize = 0.0
-shader_param/secondBorderColor = Plane( 0, 0, 0, 1 )
 
-[sub_resource type="ImageTexture" id=3]
-flags = 0
-flags = 0
-size = Vector2( 20, 20 )
-
-[sub_resource type="RectangleShape2D" id=4]
+[sub_resource type="RectangleShape2D" id=3]
 extents = Vector2( 15, 15 )
 
 [node name="Army" type="Area2D" groups=[
 "Army",
 ]]
-position = Vector2( 481.849, 70.1479 )
 script = SubResource( 1 )
 __meta__ = {
 "_edit_group_": true
@@ -152,8 +151,9 @@ __meta__ = {
 
 [node name="Sprite" type="Sprite" parent="."]
 material = SubResource( 2 )
-texture = SubResource( 3 )
+texture = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource( 4 )
+visible = false
+shape = SubResource( 3 )
 

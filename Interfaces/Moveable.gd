@@ -1,18 +1,18 @@
-var object
+var object : Area2D
 
-var source = null
-var target = null
+var source : Area2D = null
+var target : Area2D = null
 var speed
 
-func _init(object):
+func _init(object : Area2D):
 	self.object = object
 	pass
 
-func assign(source, target):
+func assign(source : Area2D, target : Area2D):
 	self.source = source
 	assign_target(target)
 
-func assign_target(target):
+func assign_target(target : Area2D):
 	if self.target == target or target == null:
 		return
 	var hasMethod = object.has_method('target_destroyed')
@@ -35,6 +35,9 @@ func hit_target(points):
 
 func get_target_planes():
 	return target.PlaneHolder.planes
+
+func get_rotation_degrees() -> float:
+	return rad2deg(target.position.angle_to_point(object.position));
 
 func calculate_move():
 	var targetVector = target.position - object.position

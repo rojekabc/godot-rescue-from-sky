@@ -246,7 +246,7 @@ func _tween_completed(object, key):
 		$Tween.remove(object, key)
 		# Check that are any new closest target
 		var target = army_find_target(object)
-		object.Moveable.assign_target(target)
+		object.assign_target(target)
 		_calculate_move_tween(object)
 	pass
 
@@ -314,6 +314,7 @@ func army_start(source, target):
 	Game.verbose('Send ' + army.get_name() + ' to attack ' + target.get_name())
 	army.visible = true
 	army.position = source.position
+	army.assign_target(target)
 	$Map/Armies.add_child(army)
 	_calculate_move_tween(army)
 	pass
