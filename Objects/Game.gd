@@ -125,7 +125,7 @@ func _ready():
 		produces = [RESOURCE.AIRPLANE]
 	}
 	structureDefinitions[STRUCTURE.CAPITAL] = {
-		name = 'Capital HQ',
+		name = 'Capital',
 		type = STRUCTURE.CAPITAL,
 		acronym = 'HQ',
 		consumes = [RESOURCE.FOOD, RESOURCE.MANPOWER],

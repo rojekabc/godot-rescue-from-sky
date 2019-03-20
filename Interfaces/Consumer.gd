@@ -41,7 +41,7 @@ func clear(resource):
 	consumedResource.has = false
 	consumedResource.wait = false
 
-func can_send(resource):	
+func can_send(resource) -> bool:
 	var consumedResource = consumes[resource]
-	return not (consumedResource.has or consumedResource.wait)
+	return not (consumedResource.has or consumedResource.wait or object.Destructable.is_destroyed())
 

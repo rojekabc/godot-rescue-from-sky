@@ -79,17 +79,20 @@ func _produced_resource_start_production(produce):
 		 + " start production of " + Game.resourceDefinitions[produce.resource].name)
 
 func _produced_resource_distribute(produce):
+	var availableConsumers = []
 	for consumer in produce.consumers:
-		if not consumer.Consumer.can_send(produce.resource):
-			continue
-		if LOG: Game.verbose(
-			object.get_name()
-			+ " send " + Game.resourceDefinitions[produce.resource].name
-			+ " to " + consumer.get_name())
-		Game.getWorld().transport_start(object, consumer, produce.resource)
-		produce.has = false
-		consumer.Consumer.wait(produce.resource)
-		break
+		if consumer.Consumer.can_send(produce.resource):
+			availableConsumers.append(consumer)
+	if availableConsumers.empty():
+		return
+	var consumer = Tool.array_random(availableConsumers)
+	if LOG: Game.verbose(
+		object.get_name()
+		+ " send " + Game.resourceDefinitions[produce.resource].name
+		+ " to " + consumer.get_name())
+	Game.getWorld().transport_start(object, consumer, produce.resource)
+	produce.has = false
+	consumer.Consumer.wait(produce.resource)
 
 func _init(obj):
 	self.object = obj
