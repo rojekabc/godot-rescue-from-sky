@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=2]
 
-[ext_resource path="res://Resources/TransportCircle.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
 [ext_resource path="res://Resources/Transport.png" type="Texture" id=2]
 [ext_resource path="res://Resources/TransportFont.tres" type="DynamicFont" id=3]
 

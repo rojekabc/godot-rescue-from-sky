@@ -86,9 +86,12 @@ func start_attacking(body):
 	# select current attacking element
 	attackTarget = body
 
+func reset_rotation():
+	$Sprite.rotation_degrees = Moveable.get_rotation_degrees()
+
 func assign_target(target):
 	Moveable.assign_target(target)
-	$Sprite.rotation_degrees = Moveable.get_rotation_degrees()
+	reset_rotation()
 
 func find_new_target():
 	stop_attacking()

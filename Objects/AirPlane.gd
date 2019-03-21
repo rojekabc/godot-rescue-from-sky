@@ -16,6 +16,6 @@ func _init(ownerIdx, airplaneType):
 func get_name():
 	var planeTypeName = 'UFO'
 	match type:
-		Game.FIGHTER: planeTypeName = 'Fighter'
-		Game.BOMBER: planeTypeName = 'Bomber'
+		Game.PLANE.FIGHTER: planeTypeName = 'Fighter'
+		Game.PLANE.BOMBER: planeTypeName = 'Bomber'
 	return Game.playerDefinitions[ownerIdx].name + '.' + planeTypeName

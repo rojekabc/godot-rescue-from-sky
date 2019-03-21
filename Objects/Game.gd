@@ -7,10 +7,10 @@ enum PLANE{FIGHTER, BOMBER}
 var timetick = 0
 var armyId = 0 setget ,get_army_id
 # Scenes
-var Structure
-var Transport
-var Squad
-var Army
+var Structure : Area2D
+var Transport : Area2D
+var Squad : Area2D
+var Army : Area2D
 
 # Objects
 #warning-ignore:unused_class_variable

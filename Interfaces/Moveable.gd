@@ -39,6 +39,14 @@ func get_target_planes():
 func get_rotation_degrees() -> float:
 	return rad2deg(target.position.angle_to_point(object.position));
 
+func get_closest_rotation() -> float:
+	var degrees = get_rotation_degrees()
+	var closest = 0
+	for i in [-180, -135, -90, -45, 0, 45, 90, 135, 180]:
+		if abs(i-degrees) < abs(closest-degrees): closest = i
+	return closest
+	
+
 func calculate_move():
 	var targetVector = target.position - object.position
 	var distance = targetVector.length()

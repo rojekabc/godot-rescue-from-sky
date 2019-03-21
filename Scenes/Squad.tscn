@@ -1,6 +1,7 @@
 [gd_scene load_steps=6 format=2]
 
-[ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/Fighter.png" type="Texture" id=2]
 
 [sub_resource type="GDScript" id=1]
 resource_name = "Squad"
@@ -31,10 +32,21 @@ func _init():
 	PlaneHolder = Game.PlaneHolder.new(self)
 	connect('update_planes', self, '_update_planes')
 
+func reset_rotation():
+	$Sprite.rotation_degrees = Moveable.get_closest_rotation()
+
+func assign_target(target : Area2D):
+	Moveable.assign_target(target)
+	reset_rotation()
+
+func move_home():
+	Moveable.assign_target(Moveable.source)
+	reset_rotation()
+
 func target_destroyed(target):
 	Game.verbose(get_name() + ': Target destroyed')
-	Moveable.move_home()
-
+	move_home()
+	
 func _update_planes(object, planesData):
 	type = Game.PLANE.FIGHTER
 	for plane in planesData:
@@ -58,7 +70,7 @@ func catch_target():
 		clean()
 	else:
 		attack_target()
-		Moveable.move_home()
+		move_home()
 
 func attack_target():
 	var target = Moveable.target
@@ -127,31 +139,26 @@ func _body_entered(body):
 	pass
 "
 
-[sub_resource type="ShaderMaterial" id=2]
+[sub_resource type="ShaderMaterial" id=3]
 shader = ExtResource( 1 )
-shader_param/color = Plane( 0.8, 0, 0, 0.6 )
+shader_param/color = Plane( 1, 0, 0, 1 )
 
-[sub_resource type="ImageTexture" id=3]
-flags = 0
-flags = 0
-size = Vector2( 20, 20 )
-
-[sub_resource type="RectangleShape2D" id=4]
+[sub_resource type="RectangleShape2D" id=2]
 extents = Vector2( 15, 15 )
 
 [node name="Squad" type="Area2D" groups=[
 "Squad",
 ]]
-position = Vector2( 349.767, 72.1741 )
 script = SubResource( 1 )
 __meta__ = {
 "_edit_group_": true
 }
 
 [node name="Sprite" type="Sprite" parent="."]
-material = SubResource( 2 )
-texture = SubResource( 3 )
+material = SubResource( 3 )
+texture = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource( 4 )
+visible = false
+shape = SubResource( 2 )
 

@@ -205,6 +205,8 @@ func squad_start(source, target, planes):
 	squad.position = source.position
 	squad.ownerIdx = source.ownerIdx
 	squad.Moveable.assign(source, target)
+	squad.assign_target(target)
+	squad.get_node('Sprite').material = Game.playerDefinitions[squad.ownerIdx].armyMaterial
 	source.PlaneHolder.rem_planes(planes)
 	squad.PlaneHolder.add_planes(planes)
 	$Map/Squads.add_child(squad)
@@ -242,6 +244,7 @@ func _tween_completed(object, key):
 	elif object.is_in_group(\"Squad\"):
 		$Tween.remove(object, key)
 		_calculate_move_tween(object)
+		object.reset_rotation()
 	elif object.is_in_group(\"Army\"):
 		$Tween.remove(object, key)
 		# Check that are any new closest target
