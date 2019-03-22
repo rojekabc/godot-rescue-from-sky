@@ -264,7 +264,11 @@ func _structure_create(ownerIdx, type):
 	structure.visible = true
 	structure.ownerIdx = ownerIdx
 	structure.random_position(ownerIdx)
-	structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
+	if structure.type == Game.STRUCTURE.AIRPORT:
+		structure.get_node('Sprite').texture = load('res://Resources/StructureAirport.png')
+		structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].armyMaterial
+	else:
+		structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
 	return structure
 
 func _airplane_create(ownerIdx, type):
