@@ -56,7 +56,10 @@ func random_position(ownerIdx):
 func assign_type(strType, timer):
 	var strDef = Game.structureDefinitions[strType]
 	type = strDef.type
-	$Acronym.text = strDef.acronym
+	if type == Game.STRUCTURE.AIRPORT || type == Game.STRUCTURE.CITY:
+		$Acronym.text = ''
+	else:
+		$Acronym.text = strDef.acronym
 	timer.connect('timeout', self, '_timeout')
 	for resource in strDef.consumes:
 		Consumer.add(resource)

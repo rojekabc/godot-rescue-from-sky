@@ -112,7 +112,7 @@ func _timeout():
 	if dc: return # Phase of not connected to timer, but call possible in same step
 	if attackTarget and not attackTarget.Destructable.is_destroyed():
 		Game.verbose(get_name() + ': hit ' + attackTarget.get_name())
-		attackTarget.Destructable.hit(5)
+		attackTarget.Destructable.hit(5 * Destructable.get_hp_rate())
 	else:
 		find_new_target()
 

@@ -12,6 +12,9 @@ func assign(destroy_func = 'destroy'):
 func is_destroyed():
 	return hp <= 0
 
+func get_hp_rate()->float:
+	return hp/100.0
+
 func hit(points):
 	if is_destroyed():
 		return

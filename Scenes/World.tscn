@@ -267,6 +267,9 @@ func _structure_create(ownerIdx, type):
 	if structure.type == Game.STRUCTURE.AIRPORT:
 		structure.get_node('Sprite').texture = load('res://Resources/StructureAirport.png')
 		structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].armyMaterial
+	elif structure.type == Game.STRUCTURE.CITY:
+		structure.get_node('Sprite').texture = load('res://Resources/StructureCity.png')
+		structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].armyMaterial
 	else:
 		structure.get_node('Sprite').material = Game.playerDefinitions[ownerIdx].structureMaterial
 	return structure
