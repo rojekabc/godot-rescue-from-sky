@@ -23,7 +23,7 @@ func get_at(x : int, y : int) -> int:
 func set_at(x:int, y:int, v:int) -> void:
 	map[x+y*WIDTH] = v
 
-func list_borders_positions() -> Array:
+func list_horizontal_border_positions() -> Array:
 	var result : Array = []
 	
 	# search by rows
@@ -34,6 +34,21 @@ func list_borders_positions() -> Array:
 			var cur : int = map[x + y*WIDTH]
 			if prev != cur:
 				result.append(Vector2(x*PIXEL_WIDTH, y*PIXEL_HEIGHT + PIXEL_HEIGHT/2))
+			prev = cur
+	
+	return result
+
+func list_vertical_border_positions() -> Array:
+	var result : Array = []
+	
+	# search by rows
+	for x in range(0, WIDTH):
+		# keep previous value
+		var prev : int = map[x]
+		for y in range(0, HEIGHT):
+			var cur : int = map[x + y*WIDTH]
+			if prev != cur:
+				result.append(Vector2(x*PIXEL_WIDTH + PIXEL_WIDTH/2, y*PIXEL_HEIGHT))
 			prev = cur
 	
 	return result

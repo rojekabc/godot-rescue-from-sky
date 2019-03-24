@@ -10,7 +10,7 @@ resource_name = "World"
 script/source = "extends Node2D
 
 var selectTarget = null
-var ownerMap : OwnerMap = preload('res://Objects/OwnerMap.gd').new()
+var ownerMap : OwnerMap
 
 func _ready():
 	# Enable randomization
@@ -23,6 +23,7 @@ func _ready():
 	# Prepare materials
 	_prepare_materials()
 	# Crate real map
+	ownerMap = load('res://Objects/OwnerMap.gd').new()
 	_map_create()
 	# Start all transport moves with monitoring them
 	$Tween.start()
@@ -133,11 +134,18 @@ func _timeout():
 # Create map
 # Don't allow to cross other structure on the map
 func _map_create():
-	var borders : Array = ownerMap.list_borders_positions()
+	var borders : Array = ownerMap.list_horizontal_border_positions()
 	for borderPos in borders:
 		var border = Game.Border.duplicate()
 		border.position = borderPos
 		$Map/Borders.add_child(border)
+	borders = ownerMap.list_vertical_border_positions()
+	for borderPos in borders:
+		var border = Game.Border.duplicate()
+		border.position = borderPos
+		border.rotation_degrees = 90
+		$Map/Borders.add_child(border)
+	
 	for ownerIdx in range(2):
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
