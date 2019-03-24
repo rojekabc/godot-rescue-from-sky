@@ -10,6 +10,8 @@ resource_name = "World"
 script/source = "extends Node2D
 
 var selectTarget = null
+var ownerMap : OwnerMap = preload('res://Objects/OwnerMap.gd').new()
+
 func _ready():
 	# Enable randomization
 	randomize()
@@ -131,6 +133,11 @@ func _timeout():
 # Create map
 # Don't allow to cross other structure on the map
 func _map_create():
+	var borders : Array = ownerMap.list_borders_positions()
+	for borderPos in borders:
+		var border = Game.Border.duplicate()
+		border.position = borderPos
+		$Map/Borders.add_child(border)
 	for ownerIdx in range(2):
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
@@ -467,11 +474,13 @@ script = SubResource( 1 )
 
 [node name="Structures" type="Node2D" parent="Map"]
 
-[node name="Squads" type="Node2D" parent="Map"]
+[node name="Borders" type="Node2D" parent="Map"]
 
 [node name="Transports" type="Node2D" parent="Map"]
 
 [node name="Armies" type="Node2D" parent="Map"]
+
+[node name="Squads" type="Node2D" parent="Map"]
 
 [node name="UI" type="Control" parent="Map"]
 margin_right = 1024.0

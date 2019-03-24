@@ -11,6 +11,7 @@ var Structure : Area2D
 var Transport : Area2D
 var Squad : Area2D
 var Army : Area2D
+var Border : Area2D
 
 # Objects
 #warning-ignore:unused_class_variable
@@ -170,4 +171,5 @@ func _ready():
 	Transport = load('res://Scenes/Transport.tscn').instance()
 	Squad = load('res://Scenes/Squad.tscn').instance()
 	Army = load('res://Scenes/Army.tscn').instance()
+	Border = load('res://Scenes/Border.tscn').instance()
 	pass

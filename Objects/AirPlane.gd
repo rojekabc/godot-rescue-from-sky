@@ -1,3 +1,5 @@
+class_name AirPlane
+
 var type
 var ownerIdx
 

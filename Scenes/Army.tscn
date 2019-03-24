@@ -117,8 +117,6 @@ func _timeout():
 		find_new_target()
 
 func _body_entered(body):
-	if body.ownerIdx == ownerIdx:
-		return
 	
 	if body.is_in_group(\"Structure\"):
 		catch_structure(body)
@@ -127,6 +125,9 @@ func _body_entered(body):
 	elif body.is_in_group(\"Army\"):
 		catch_army(body)
 	else:
+		return
+		
+	if body.ownerIdx == ownerIdx:
 		return
 	
 	if body.Destructable.is_destroyed():

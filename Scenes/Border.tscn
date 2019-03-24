@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
+[ext_resource path="res://Resources/Border.png" type="Texture" id=2]
+
+[sub_resource type="RectangleShape2D" id=2]
+
+[sub_resource type="ShaderMaterial" id=3]
+shader = ExtResource( 1 )
+shader_param/color = Plane( 0.35, 0.35, 0.35, 1 )
+
+[node name="Border" type="Area2D" groups=[
+"Border",
+]]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+visible = false
+shape = SubResource( 2 )
+
+[node name="Sprite" type="Sprite" parent="."]
+material = SubResource( 3 )
+texture = ExtResource( 2 )
+
