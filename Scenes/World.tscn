@@ -119,6 +119,7 @@ func _find_structures_at(global_positions):
 	return result
 
 func _prepare_materials():
+	Game.neutralMaterial = Game.Border.get_node('Sprite').material
 	for playerDefinition in Game.playerDefinitions:
 		playerDefinition.structureMaterial = Game.Structure.get_node('Sprite').material.duplicate()
 		playerDefinition.structureMaterial.set('shader_param/color', playerDefinition.color)
@@ -126,7 +127,6 @@ func _prepare_materials():
 		playerDefinition.armyMaterial.set('shader_param/color', playerDefinition.color)
 		playerDefinition.transportMaterial = Game.Transport.get_node('Sprite').material.duplicate()
 		playerDefinition.transportMaterial.set('shader_param/color', playerDefinition.color)
-		
 
 func _timeout():
 	Game.timetick += 1
@@ -134,17 +134,7 @@ func _timeout():
 # Create map
 # Don't allow to cross other structure on the map
 func _map_create():
-	var borders : Array = ownerMap.list_horizontal_border_positions()
-	for borderPos in borders:
-		var border = Game.Border.duplicate()
-		border.position = borderPos
-		$Map/Borders.add_child(border)
-	borders = ownerMap.list_vertical_border_positions()
-	for borderPos in borders:
-		var border = Game.Border.duplicate()
-		border.position = borderPos
-		border.rotation_degrees = 90
-		$Map/Borders.add_child(border)
+	ownerMap.place_borders($Map/Borders)
 	
 	for ownerIdx in range(2):
 		for strType in Game.STRUCTURE.values():
@@ -227,6 +217,31 @@ func squad_start(source, target, planes):
 	$Map/Squads.add_child(squad)
 	_calculate_move_tween(squad)
 
+
+func _calculate_move_tween(moveObject):
+	var move = moveObject.Moveable.calculate_move()
+	$Tween.interpolate_property(moveObject, \"position\",
+		moveObject.position, move.position,
+		move.time, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
+	pass
+
+# Call by tween signal
+const BORDER_POWER_CHANGE_BY_ARMY = 20
+func _tween_completed(object, key):
+	if object.is_in_group(\"Transport\"):
+		object.complete()
+		# $Tween.remove(object, key)
+	elif object.is_in_group(\"Squad\"):
+		$Tween.remove(object, key)
+		_calculate_move_tween(object)
+		object.reset_rotation()
+	elif object.is_in_group(\"Army\"):
+		$Tween.remove(object, key)
+		var target = object.get_target()
+		target.change_power(object.ownerIdx, BORDER_POWER_CHANGE_BY_ARMY * object.get_hp_rate())
+		object.destroy()
+	pass
+
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
 	if sourceStructure == targetStructure:
@@ -243,31 +258,7 @@ func transport_start(sourceStructure, targetStructure, transportedResource):
 		time,
 		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
 	$Tween.start()
-
-func _calculate_move_tween(moveObject):
-	var move = moveObject.Moveable.calculate_move()
-	$Tween.interpolate_property(moveObject, \"position\",
-		moveObject.position, move.position,
-		move.time, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
-	pass
-
-# Call by tween signal
-func _tween_completed(object, key):
-	if object.is_in_group(\"Transport\"):
-		object.complete()
-		# $Tween.remove(object, key)
-	elif object.is_in_group(\"Squad\"):
-		$Tween.remove(object, key)
-		_calculate_move_tween(object)
-		object.reset_rotation()
-	elif object.is_in_group(\"Army\"):
-		$Tween.remove(object, key)
-		# Check that are any new closest target
-		var target = army_find_target(object)
-		object.assign_target(target)
-		_calculate_move_tween(object)
-	pass
-
+	
 func _transport_create(sourceStructure, targetStructure, transportedResource):
 	var transport = Game.Transport.duplicate()
 	transport.setup(sourceStructure, targetStructure, transportedResource)
@@ -298,32 +289,32 @@ func army_find_target_from_array(source, array):
 	var distance = 20000
 	for child in array:
 		var targetDistance = (child.position - source.position).length()
-		if (source.ownerIdx != child.ownerIdx 
-		and targetDistance < distance 
-		and not child.Destructable.is_destroyed()):
+		if targetDistance < distance:
 			target = child
 			distance = targetDistance
 	return target
 
-func army_find_target_overlaps(source, array):
-	var target = null
-	for child in array:
-		if (source.ownerIdx != child.ownerIdx
-			and source.overlaps_area(child)
-			and not child.Destructable.is_destroyed()):
-			return child
-	return null
+#func army_find_target_overlaps(source, array):
+#	var target = null
+#	for child in array:
+#		if (source.ownerIdx != child.ownerIdx
+#			and source.overlaps_area(child)
+#			and not child.Destructable.is_destroyed()):
+#			return child
+#	return null
 
 func army_find_target(source):
-	var closest = []
-	var closest_structure = army_find_target_from_array(source, $Map/Structures.get_children())
-	if closest_structure: closest.append(closest_structure)
-	var closest_army = army_find_target_from_array(source, $Map/Armies.get_children())
-	if closest_army: closest.append(closest_army)
-	var overlaps_transport = army_find_target_overlaps(source, $Map/Transports.get_children())
-	if overlaps_transport: return overlaps_transport
-	return army_find_target_from_array(source, closest)
-	
+	var closest_board = army_find_target_from_array(source, $Map/Borders.get_children())
+	return closest_board
+#	var closest = []
+#	var closest_structure = army_find_target_from_array(source, $Map/Structures.get_children())
+#	if closest_structure: closest.append(closest_structure)
+#	var closest_army = army_find_target_from_array(source, $Map/Armies.get_children())
+#	if closest_army: closest.append(closest_army)
+#	var overlaps_transport = army_find_target_overlaps(source, $Map/Transports.get_children())
+#	if overlaps_transport: return overlaps_transport
+#	return army_find_target_from_array(source, closest)
+#
 
 func army_create(source, target):
 	var army = Game.create(Game.Army)
@@ -341,7 +332,14 @@ func army_start(source, target):
 	army.position = source.position
 	army.assign_target(target)
 	$Map/Armies.add_child(army)
-	_calculate_move_tween(army)
+	var distance = (target.position - source.position).length()
+	var time = distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time
+	$Tween.interpolate_property(
+		army, \"position\",
+		source.position, target.position,
+		time,
+		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+	$Tween.start()
 	pass
 	"
 

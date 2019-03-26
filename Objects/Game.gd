@@ -6,6 +6,10 @@ enum PLANE{FIGHTER, BOMBER}
 
 var timetick = 0
 var armyId = 0 setget ,get_army_id
+
+# Materials
+var neutralMaterial
+
 # Scenes
 var Structure : Area2D
 var Transport : Area2D
@@ -28,7 +32,7 @@ var Consumer = preload('res://Interfaces/Consumer.gd')
 var Producer = preload('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
-		verbose = true,
+		verbose = false,
 		loggers = [],
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,

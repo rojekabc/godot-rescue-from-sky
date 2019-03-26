@@ -15,12 +15,18 @@ _global_script_classes=[ {
 "path": "res://Objects/AirPlane.gd"
 }, {
 "base": "Reference",
+"class": "Destructable",
+"language": "GDScript",
+"path": "res://Interfaces/Destructable.gd"
+}, {
+"base": "Reference",
 "class": "OwnerMap",
 "language": "GDScript",
 "path": "res://Objects/OwnerMap.gd"
 } ]
 _global_script_class_icons={
 "AirPlane": "",
+"Destructable": "",
 "OwnerMap": ""
 }
 

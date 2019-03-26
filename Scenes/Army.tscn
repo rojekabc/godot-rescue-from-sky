@@ -8,16 +8,14 @@ resource_name = "Army"
 script/source = "extends Area2D
 
 var Moveable
-var Destructable
+var Destructable : Destructable
 var ownerIdx
 
 signal object_destroyed(object)
 
-var attackTarget
 var dc = false
 
 var tween
-var timer
 var id
 
 # 1. army was attacking structure
@@ -29,14 +27,8 @@ var id
 func _ready():
 	if get_parent().get_name() == 'Templates':
 		return
-	# structures
-	connect('body_entered', self, '_body_entered')
-	# transorts / armies
-	connect('area_entered', self, '_body_entered')
 	# resolve Tween
 	tween = Game.getWorld().get_node(\"Tween\")
-	# resolve Timer
-	timer = Game.getWorld().get_node(\"Timer\")
 
 func target_destroyed(target):
 	Game.verbose(get_name() + ': Target destroyed')
@@ -45,46 +37,12 @@ func target_destroyed(target):
 func get_name():
 	return Game.playerDefinitions[ownerIdx].name + \".army.\" + str(id)
 
-func catch_structure(structure):
-	pass
-
-func catch_transport(transport):
-	tween.remove(transport, \"position\")
-
-func catch_army(army):
-	tween.remove(army, \"position\")
-
 func destroy():
 	Game.verbose(get_name() + \": Destroy\")
 	emit_signal('object_destroyed', self)
-	stop_attacking()
 	tween.remove(self, \"position\")
 	# Game.getWorld().get_node('Map/Armies').remove(self)
 	queue_free()
-	pass
-
-func is_attacking():
-	return attackTarget != null
-
-func stop_attacking():
-	if attackTarget:
-		Game.verbose(get_name() + \": Stop attacking \" + attackTarget.get_name())
-		attackTarget = null
-		timer.disconnect('timeout', self, '_timeout')
-		dc = true
-		$Sprite.texture = load('res://Resources/Army20.png')
-
-func start_attacking(body):
-	Game.verbose(get_name() + \": Start attacking \" + body.get_name())
-	if attackTarget == null:
-		# stop moving 
-		tween.remove(self, \"position\")
-		# connect to the timer
-		timer.connect('timeout', self, '_timeout')
-		dc = false
-		$Sprite.texture = load('res://Resources/ArmyFight.png')
-	# select current attacking element
-	attackTarget = body
 
 func reset_rotation():
 	$Sprite.rotation_degrees = Moveable.get_rotation_degrees()
@@ -93,49 +51,21 @@ func assign_target(target):
 	Moveable.assign_target(target)
 	reset_rotation()
 
+func get_target() -> Area2D:
+	return Moveable.target
+	
+func get_hp_rate() -> float:
+	return Destructable.get_hp_rate()
+
 func find_new_target():
-	stop_attacking()
 	var target = Game.getWorld().army_find_target(self)
 	if target == null:
 		return
 	# setup new target
 	assign_target(target)
-	if overlaps_area(target):
-		# target is in range
-		start_attacking(target)
-		return
 	# start moving to the target
 	Game.getWorld()._calculate_move_tween(self)
 
-func _timeout():
-	Game.verbose(get_name() + ': timeout')
-	if dc: return # Phase of not connected to timer, but call possible in same step
-	if attackTarget and not attackTarget.Destructable.is_destroyed():
-		Game.verbose(get_name() + ': hit ' + attackTarget.get_name())
-		attackTarget.Destructable.hit(5 * Destructable.get_hp_rate())
-	else:
-		find_new_target()
-
-func _body_entered(body):
-	
-	if body.is_in_group(\"Structure\"):
-		catch_structure(body)
-	elif body.is_in_group(\"Transport\"):
-		catch_transport(body)
-	elif body.is_in_group(\"Army\"):
-		catch_army(body)
-	else:
-		return
-		
-	if body.ownerIdx == ownerIdx:
-		return
-	
-	if body.Destructable.is_destroyed():
-		return
-	
-	# if attackTarget: stop_attacking()
-	assign_target( body )
-	start_attacking(body)
 "
 
 [sub_resource type="ShaderMaterial" id=2]

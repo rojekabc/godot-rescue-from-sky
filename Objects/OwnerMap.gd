@@ -22,8 +22,14 @@ func get_at(x : int, y : int) -> int:
 
 func set_at(x:int, y:int, v:int) -> void:
 	map[x+y*WIDTH] = v
+	
+func place_borders(var node : Node2D) -> void:
+	for border in list_horizontal_borders():
+		node.add_child(border)
+	for border in list_vertical_borders():
+		node.add_child(border)
 
-func list_horizontal_border_positions() -> Array:
+func list_horizontal_borders() -> Array:
 	var result : Array = []
 	
 	# search by rows
@@ -33,12 +39,14 @@ func list_horizontal_border_positions() -> Array:
 		for x in range(0, WIDTH):
 			var cur : int = map[x + y*WIDTH]
 			if prev != cur:
-				result.append(Vector2(x*PIXEL_WIDTH, y*PIXEL_HEIGHT + PIXEL_HEIGHT/2))
+				var border : Area2D = Game.Border.duplicate().setup(Vector2(x-1, y), Vector2(x, y))
+				border.position = Vector2(x*PIXEL_WIDTH, y*PIXEL_HEIGHT + PIXEL_HEIGHT/2)
+				result.append(border)
 			prev = cur
 	
 	return result
 
-func list_vertical_border_positions() -> Array:
+func list_vertical_borders() -> Array:
 	var result : Array = []
 	
 	# search by rows
@@ -48,7 +56,10 @@ func list_vertical_border_positions() -> Array:
 		for y in range(0, HEIGHT):
 			var cur : int = map[x + y*WIDTH]
 			if prev != cur:
-				result.append(Vector2(x*PIXEL_WIDTH + PIXEL_WIDTH/2, y*PIXEL_HEIGHT))
+				var border : Area2D = Game.Border.duplicate().setup(Vector2(x, y-1), Vector2(x, y))
+				border.position = Vector2(x*PIXEL_WIDTH + PIXEL_WIDTH/2, y*PIXEL_HEIGHT)
+				border.rotation_degrees = 90
+				result.append(border)
 			prev = cur
 	
 	return result

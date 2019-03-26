@@ -1,7 +1,57 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=1]
 [ext_resource path="res://Resources/Border.png" type="Texture" id=2]
+
+[sub_resource type="GDScript" id=1]
+resource_name = "Border"
+script/source = "extends Area2D
+class_name Border
+
+signal object_destroyed(object)
+
+var from : Vector2
+var to : Vector2
+var playerPower : PoolRealArray = PoolRealArray()
+
+func setup(from : Vector2, to : Vector2) -> Border:
+	self.from = from
+	self.to = to
+	for i in range(0, Game.playerDefinitions.size()):
+		playerPower.append(0.0)
+	return self
+
+func _ready():
+	update_color()
+
+func is_for(var from : Vector2, var to : Vector2) -> bool:
+	return (self.from == from and self.to == to) or (self.from == to and self.to == from)
+
+func change_power(var playerId : int, var powerChange : float) -> void:
+	playerPower[playerId] = clamp(playerPower[playerId] + powerChange, 0, 100)
+	update_color()
+
+func update_color() -> void:
+	# TODO find max position and player and check that is same with min or no.
+	var is_neutral = true
+	var maxPlayer = 0
+	var maxPower = playerPower[maxPlayer]
+	for i in range(0, playerPower.size()):
+		if playerPower[i] > maxPower:
+			is_neutral = false
+			maxPlayer = i
+			maxPower = playerPower[i]
+	if is_neutral:
+		$Sprite.material = Game.neutralMaterial
+		print(str(playerPower) + ' neutral')
+	else:
+		$Sprite.material = Game.playerDefinitions[maxPlayer].armyMaterial
+		print(str(playerPower) + ' player')
+	pass
+
+func destroy():
+	emit_signal('object_destroyed', self)
+"
 
 [sub_resource type="RectangleShape2D" id=2]
 
@@ -12,6 +62,7 @@ shader_param/color = Plane( 0.35, 0.35, 0.35, 1 )
 [node name="Border" type="Area2D" groups=[
 "Border",
 ]]
+script = SubResource( 1 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 visible = false

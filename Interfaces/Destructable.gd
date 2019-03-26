@@ -1,6 +1,8 @@
+class_name Destructable
+
 var object
 
-var hp = 100
+var hp : float = 100
 var destroyFunc = 'destroy'
 
 func _init(object):
