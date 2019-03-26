@@ -33,20 +33,13 @@ func change_power(var playerId : int, var powerChange : float) -> void:
 
 func update_color() -> void:
 	# TODO find max position and player and check that is same with min or no.
-	var is_neutral = true
-	var maxPlayer = 0
-	var maxPower = playerPower[maxPlayer]
-	for i in range(0, playerPower.size()):
-		if playerPower[i] > maxPower:
-			is_neutral = false
-			maxPlayer = i
-			maxPower = playerPower[i]
+	var result : PoolIntArray = Tool.array_min_max_idx(playerPower)
+	var is_neutral : bool = result[0] == result[1]
+	var maxPlayer : int = result[1]
 	if is_neutral:
 		$Sprite.material = Game.neutralMaterial
-		print(str(playerPower) + ' neutral')
 	else:
 		$Sprite.material = Game.playerDefinitions[maxPlayer].armyMaterial
-		print(str(playerPower) + ' player')
 	pass
 
 func destroy():

@@ -294,27 +294,9 @@ func army_find_target_from_array(source, array):
 			distance = targetDistance
 	return target
 
-#func army_find_target_overlaps(source, array):
-#	var target = null
-#	for child in array:
-#		if (source.ownerIdx != child.ownerIdx
-#			and source.overlaps_area(child)
-#			and not child.Destructable.is_destroyed()):
-#			return child
-#	return null
-
 func army_find_target(source):
 	var closest_board = army_find_target_from_array(source, $Map/Borders.get_children())
 	return closest_board
-#	var closest = []
-#	var closest_structure = army_find_target_from_array(source, $Map/Structures.get_children())
-#	if closest_structure: closest.append(closest_structure)
-#	var closest_army = army_find_target_from_array(source, $Map/Armies.get_children())
-#	if closest_army: closest.append(closest_army)
-#	var overlaps_transport = army_find_target_overlaps(source, $Map/Transports.get_children())
-#	if overlaps_transport: return overlaps_transport
-#	return army_find_target_from_array(source, closest)
-#
 
 func army_create(source, target):
 	var army = Game.create(Game.Army)
