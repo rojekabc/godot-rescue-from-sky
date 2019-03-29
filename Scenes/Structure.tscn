@@ -14,12 +14,8 @@ const FULL_SIZE = 60
 var type
 var ownerIdx
 
-# var consumes = {}
-# var produces = {}
-
 var PlaneHolder
 var Destructable
-# var Targetable
 var Consumer
 var Producer
 
@@ -31,7 +27,6 @@ func destroy():
 
 func _init():
 	Destructable = Game.Destructable.new(self)
-#	Targetable = Game.Targetable.new(self)
 	Consumer = Game.Consumer.new(self)
 	Producer = Game.Producer.new(self)
 
@@ -111,7 +106,6 @@ func _Bunker_timeout():
 		return
 	var target = Game.getWorld().army_find_target(self)
 	if target:
-		print(target.get_name())
 		Game.getWorld().army_start(self, target)
 		Producer.consume(Game.RESOURCE.ARMY)
 	pass

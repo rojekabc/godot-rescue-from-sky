@@ -1,6 +1,8 @@
 extends Area2D
 class_name Border
 
+var LOG = Game.CONFIGURATION.loggers.has('Border')
+
 signal object_destroyed(object)
 
 var from : Vector2
@@ -19,6 +21,7 @@ func setup(from : Vector2, to : Vector2) -> Border:
 
 func _ready():
 	update_color()
+	if LOG: Game.verbose(get_name() + ' ready')
 
 func is_for(var from : Vector2, var to : Vector2) -> bool:
 	return (self.from == from and self.to == to) or (self.from == to and self.to == from)
@@ -69,8 +72,10 @@ func get_attack_point(ownerMap : OwnerMap):
 		return to
 
 func get_name() -> String:
-	return "Border " + str(from) + " : " + str(to)
+	return "Border " + str(from) + ":" + str(to)
 
 func destroy():
+	if LOG: Game.verbose(get_name() + ' destroyed')
+	get_parent().remove_child(self)
 	emit_signal('object_destroyed', self)
 	queue_free()

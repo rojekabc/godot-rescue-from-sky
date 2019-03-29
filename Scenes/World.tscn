@@ -53,6 +53,7 @@ func _input(event):
 			var strPressed = _find_structure_at(event.global_position)
 			if strPressed:
 				strPressed.pressed(self)
+				return
 	pass
 
 func _select_target_action(globalPosition):
@@ -79,6 +80,8 @@ func _select_target_action(globalPosition):
 			return _fail('Unknown mission against your squad')
 		else:
 			_info('Planned attack on ' + target.get_name())
+	elif target.is_in_group('Border'):
+		_info('Planned attack on ' + target.get_name())
 	else:
 		return _fail('Unknown mission')
 	selectTarget.target = target
@@ -100,6 +103,8 @@ func _find_element_at(globalPosition):
 			elif collider.is_in_group('Transport'):
 				selected = collider
 			elif collider.is_in_group('Squad'):
+				selected = collider
+			elif collider.is_in_group('Border'):
 				selected = collider
 	return selected
 
@@ -239,7 +244,6 @@ func _calculate_full_move_tween(moveObject):
 	pass
 
 # Call by tween signal
-const BORDER_POWER_CHANGE_BY_ARMY = 20
 func _tween_completed(object, key):
 	if object.is_in_group(\"Transport\"):
 		object.complete()
@@ -251,7 +255,7 @@ func _tween_completed(object, key):
 	elif object.is_in_group(\"Army\"):
 		$Tween.remove(object, key)
 		var target = object.get_target()
-		target.change_power(object.ownerIdx, BORDER_POWER_CHANGE_BY_ARMY * object.get_hp_rate())
+		target.change_power(object.ownerIdx, Game.CONFIGURATION.armyPower * object.get_hp_rate())
 		object.destroy()
 	pass
 
@@ -291,18 +295,20 @@ func _airplane_create(ownerIdx, type):
 	var airplane = Game.AirPlane.new(ownerIdx, type)
 	return airplane
 
-func army_find_target_from_array(source, array):
+func army_find_target_from_array(source, array, excluded=[]):
 	var target = null
 	var distance = 20000
 	for child in array:
+		if excluded.has(child):
+			continue
 		var targetDistance = (child.position - source.position).length()
 		if targetDistance < distance:
 			target = child
 			distance = targetDistance
 	return target
 
-func army_find_target(source):
-	var closest_board = army_find_target_from_array(source, $Map/Borders.get_children())
+func army_find_target(source, excluded = []):
+	var closest_board = army_find_target_from_array(source, $Map/Borders.get_children(), excluded)
 	return closest_board
 
 func army_create(source, target):
@@ -316,7 +322,7 @@ func army_create(source, target):
 
 func army_start(source, target):
 	var army = army_create(source, target)
-	Game.verbose('Send ' + army.get_name() + ' to attack ' + target.get_name())
+	if army.LOG: Game.verbose('Send ' + army.get_name() + ' to attack ' + target.get_name())
 	army.visible = true
 	army.position = source.position
 	army.assign_target(target)

@@ -25,14 +25,14 @@ func _ready():
 	tween = Game.getWorld().get_node(\"Tween\")
 
 func target_destroyed(target):
-	Game.verbose(get_name() + ': Target destroyed')
+	if LOG: Game.verbose(get_name() + ': Target destroyed')
 	find_new_target()
 
 func get_name():
 	return Game.playerDefinitions[ownerIdx].name + \".army.\" + str(id)
 
 func destroy():
-	Game.verbose(get_name() + \": Destroy\")
+	if LOG: Game.verbose(get_name() + \": Destroy\")
 	emit_signal('object_destroyed', self)
 	tween.remove(self, \"position\")
 	queue_free()

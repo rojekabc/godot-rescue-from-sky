@@ -33,7 +33,7 @@ var Producer = preload('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
 		verbose = true,
-		loggers = ["Army"],
+		loggers = [],
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
