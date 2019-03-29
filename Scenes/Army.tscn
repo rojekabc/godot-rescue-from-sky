@@ -7,22 +7,16 @@
 resource_name = "Army"
 script/source = "extends Area2D
 
+var LOG = Game.CONFIGURATION.loggers.has('Army')
+
 var Moveable
 var Destructable : Destructable
 var ownerIdx
 
 signal object_destroyed(object)
 
-var dc = false
-
 var tween
 var id
-
-# 1. army was attacking structure
-# 2. catch transport and stop it
-# 3. was attacked by enemy
-# 4. wins and find other target
-# 5. tarnsport don't move any more and wasn't destroyed
 
 func _ready():
 	if get_parent().get_name() == 'Templates':
@@ -41,7 +35,6 @@ func destroy():
 	Game.verbose(get_name() + \": Destroy\")
 	emit_signal('object_destroyed', self)
 	tween.remove(self, \"position\")
-	# Game.getWorld().get_node('Map/Armies').remove(self)
 	queue_free()
 
 func reset_rotation():
@@ -58,13 +51,13 @@ func get_hp_rate() -> float:
 	return Destructable.get_hp_rate()
 
 func find_new_target():
-	var target = Game.getWorld().army_find_target(self)
+	var target = Game.getWorld().army_find_target(self, [Moveable.target])
 	if target == null:
 		return
 	# setup new target
 	assign_target(target)
 	# start moving to the target
-	Game.getWorld()._calculate_move_tween(self)
+	Game.getWorld()._calculate_full_move_tween(self)
 
 "
 

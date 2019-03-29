@@ -32,8 +32,8 @@ var Consumer = preload('res://Interfaces/Consumer.gd')
 var Producer = preload('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
-		verbose = false,
-		loggers = [],
+		verbose = true,
+		loggers = ["Army"],
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
@@ -43,7 +43,9 @@ const TEST_CONFIGURATION = {
 		squadTransportBombardDestoryChance = 100,
 		squadFighterHitPoints = 60,
 		squadBomberHitPoints = 5,
-		timertick = 1
+		timertick = 1,
+		borderScannerTick = 3,
+		armyPower = 50
 	}
 
 const GAME_CONFIGURATION = {
@@ -58,7 +60,9 @@ const GAME_CONFIGURATION = {
 		squadTransportBombardDestoryChance = 30,
 		squadFighterHitPoints = 30,
 		squadBomberHitPoints = 5,
-		timertick = 5
+		timertick = 5,
+		BorderScannerTick = 3,
+		armyPower = 20
 	}
 
 var CONFIGURATION = TEST_CONFIGURATION

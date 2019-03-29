@@ -18,11 +18,11 @@ func assign_target(target : Area2D):
 	var hasMethod = object.has_method('target_destroyed')
 	if hasMethod and (self.target != null):
 		self.target.disconnect('object_destroyed', object, 'target_destroyed')
-		Game.verbose(object.get_name() + ": remove target " + self.target.get_name())
+		if object.LOG: Game.verbose(object.get_name() + ": remove target " + self.target.get_name())
 	self.target = target
 	if hasMethod:
 		self.target.connect('object_destroyed', object, 'target_destroyed')
-	Game.verbose(object.get_name() + ": set target " + self.target.get_name())
+	if object.LOG: Game.verbose(object.get_name() + ": set target " + self.target.get_name())
 
 func move_home():
 	assign_target(source)

@@ -40,7 +40,7 @@ func _ready():
 	pass
 
 func target_destroyed(target):
-	Game.verbose(get_name() + ': Target destroyed')
+	if LOG: Game.verbose(get_name() + ': Target destroyed')
 
 func get_name():
 	return Game.playerDefinitions[Moveable.source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name

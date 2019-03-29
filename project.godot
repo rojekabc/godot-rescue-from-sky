@@ -14,18 +14,30 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://Objects/AirPlane.gd"
 }, {
+"base": "Area2D",
+"class": "Border",
+"language": "GDScript",
+"path": "res://Objects/Border.gd"
+}, {
+"base": "Node",
+"class": "BorderScanner",
+"language": "GDScript",
+"path": "res://Objects/BorderScanner.gd"
+}, {
 "base": "Reference",
 "class": "Destructable",
 "language": "GDScript",
 "path": "res://Interfaces/Destructable.gd"
 }, {
-"base": "Reference",
+"base": "Node",
 "class": "OwnerMap",
 "language": "GDScript",
 "path": "res://Objects/OwnerMap.gd"
 } ]
 _global_script_class_icons={
 "AirPlane": "",
+"Border": "",
+"BorderScanner": "",
 "Destructable": "",
 "OwnerMap": ""
 }
@@ -49,4 +61,3 @@ gdscript/warnings/enable=false
 
 quality/driver/driver_name="GLES2"
 environment/default_clear_color=Color( 0.776471, 0.776471, 0.776471, 1 )
-environment/default_environment="res://default_env.tres"

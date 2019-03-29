@@ -1,9 +1,11 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=1]
 [ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=2]
 [ext_resource path="res://Resources/TitleFont.tres" type="DynamicFont" id=3]
 [ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=4]
+[ext_resource path="res://Objects/BorderScanner.gd" type="Script" id=5]
+[ext_resource path="res://Objects/OwnerMap.gd" type="Script" id=6]
 
 [sub_resource type="GDScript" id=1]
 resource_name = "World"
@@ -225,6 +227,17 @@ func _calculate_move_tween(moveObject):
 		move.time, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
 	pass
 
+func _calculate_full_move_tween(moveObject):
+	var distance = (moveObject.Moveable.target.position - moveObject.position).length()
+	var time = distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time
+	$Tween.interpolate_property(
+		moveObject, \"position\",
+		moveObject.position, moveObject.Moveable.target.position,
+		time,
+		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
+	$Tween.start()
+	pass
+
 # Call by tween signal
 const BORDER_POWER_CHANGE_BY_ARMY = 20
 func _tween_completed(object, key):
@@ -244,20 +257,14 @@ func _tween_completed(object, key):
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
+	transport.Moveable.speed = Game.CONFIGURATION.transportSpeed
 	if sourceStructure == targetStructure:
 		transport.complete()
 		return
 	transport.visible = true
 	transport.position = sourceStructure.position
 	$Map/Transports.add_child(transport)
-	var distance = (targetStructure.position - sourceStructure.position).length()
-	var time = distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time
-	$Tween.interpolate_property(
-		transport, \"position\",
-		sourceStructure.position, targetStructure.position,
-		time,
-		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
-	$Tween.start()
+	_calculate_full_move_tween(transport)
 	
 func _transport_create(sourceStructure, targetStructure, transportedResource):
 	var transport = Game.Transport.duplicate()
@@ -314,15 +321,7 @@ func army_start(source, target):
 	army.position = source.position
 	army.assign_target(target)
 	$Map/Armies.add_child(army)
-	var distance = (target.position - source.position).length()
-	var time = distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time
-	$Tween.interpolate_property(
-		army, \"position\",
-		source.position, target.position,
-		time,
-		Tween.TRANS_LINEAR, Tween.EASE_OUT_IN)
-	$Tween.start()
-	pass
+	_calculate_full_move_tween(army)
 	"
 
 [sub_resource type="GDScript" id=2]
@@ -555,6 +554,12 @@ margin_left = 857.0
 margin_bottom = 15.0
 grow_horizontal = 0
 text = " v1.1.0 \"Armies go to war\""
+
+[node name="BorderScanner" type="Node" parent="Map"]
+script = ExtResource( 5 )
+
+[node name="OwnerMap" type="Node" parent="Map"]
+script = ExtResource( 6 )
 
 [node name="Timer" type="Timer" parent="."]
 autostart = true
