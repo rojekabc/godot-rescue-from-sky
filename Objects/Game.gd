@@ -45,7 +45,12 @@ const TEST_CONFIGURATION = {
 		squadBomberHitPoints = 5,
 		timertick = 1,
 		borderScannerTick = 3,
-		armyPower = 50
+		armyPower = 20,
+		borderMinimumPowerMultiplier = 1,
+		borderMaximumPowerMultiplier = 10,
+		borderMaximumAttackChance = 0.3,
+		borderPowerReduceAttackerMultplier = 0.5,
+		borderPowerReduceDefenderMultplier = 1.0
 	}
 
 const GAME_CONFIGURATION = {
@@ -62,10 +67,19 @@ const GAME_CONFIGURATION = {
 		squadBomberHitPoints = 5,
 		timertick = 5,
 		BorderScannerTick = 3,
-		armyPower = 20
+		armyPower = 20,
+		borderMinimumPowerMultiplier = 1,
+		borderMaximumPowerMultiplier = 10,
+		borderMaximumAttackChance = 0.3,
+		borderPowerReduceAttackerMultplier = 0.5,
+		borderPowerReduceDefenderMultplier = 1.0
 	}
 
 var CONFIGURATION = TEST_CONFIGURATION
+var borderMinimum
+var borderMaximum
+var borderPowerReduceAttacker
+var borderPowerReduceDefender
 
 const resourceDefinitions = {}
 const structureDefinitions = {}
@@ -180,4 +194,11 @@ func _ready():
 	Squad = load('res://Scenes/Squad.tscn').instance()
 	Army = load('res://Scenes/Army.tscn').instance()
 	Border = load('res://Scenes/Border.tscn').instance()
+
+	# Calculate value of static variables
+	borderMinimum = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderMinimumPowerMultiplier
+	borderMaximum = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderMaximumPowerMultiplier
+	borderPowerReduceAttacker = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderPowerReduceAttackerMultplier
+	borderPowerReduceDefender = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderPowerReduceDefenderMultplier
+
 	pass

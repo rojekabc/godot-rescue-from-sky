@@ -35,6 +35,9 @@ func place_borders(var node : Node2D) -> void:
 		node.add_child(border)
 
 func create_border(from : Vector2, to : Vector2):
+	if (from.x < 0 or to.x < 0 or from.x >= WIDTH or to.x >= WIDTH
+		or from.y < 0 or to.y < 0 or from.y >= HEIGHT or to.y >= HEIGHT):
+			return null
 	var diff : Vector2 = from - to
 	var border : Area2D = Game.Border.duplicate().setup(from, to)
 	match diff:

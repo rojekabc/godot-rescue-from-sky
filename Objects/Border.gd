@@ -16,7 +16,7 @@ func setup(from : Vector2, to : Vector2) -> Border:
 	self.from = from
 	self.to = to
 	for i in range(0, Game.playerDefinitions.size()):
-		playerPower.append(0.0)
+		playerPower.append(Game.borderMinimum)
 	return self
 
 func _ready():
@@ -36,8 +36,16 @@ func get_direction(pos : Vector2) -> Vector2:
 		return from - pos
 	return Vector2.ZERO
 
+func set_powers(var powers : PoolRealArray):
+	for i in range(0, powers.size()):
+		set_power(i, powers[i])
+
+func set_power(playerId : int, power : int) -> void:
+	playerPower[playerId] = clamp(power, Game.borderMinimum, Game.borderMaximum)
+
 func change_power(var playerId : int, var powerChange : float) -> void:
-	playerPower[playerId] = clamp(playerPower[playerId] + powerChange, 0, 100)
+	set_power(playerId, playerPower[playerId] + powerChange)
+	if LOG: Game.verbose(get_name() + " " + str(playerPower))
 	update_color()
 
 func update_state() -> void:
@@ -57,7 +65,21 @@ func is_neutral() -> bool:
 	return neutral
 
 func is_attacking() -> bool:
-	return not neutral and playerPower[winPlayer] > 80
+	return not neutral
+
+func random_attack() -> bool:
+	var winPower : float = playerPower[winPlayer]
+	var defendPower : float
+	if winPlayer == 1:
+		defendPower = playerPower[0]
+	else:
+		defendPower = playerPower[1]
+	# Chance = MAXIMUM_CHANCE * (1-x/y), where x<=y
+	var chance = Game.CONFIGURATION.borderMaximumAttackChance * (1.0 - defendPower/winPower)
+	var rand : float = randf()
+	var result = rand < chance
+	if LOG: Game.verbose("WinPower=" + str(winPower) + " defendPower=" + str(defendPower) + " chance=" + str(chance) + " rand=" + str(rand))
+	return result
 
 func get_win_player() -> int:
 	return winPlayer
@@ -70,6 +92,7 @@ func get_attack_point(ownerMap : OwnerMap):
 		return from
 	if ownerMap.get_at(to) != winPlayer:
 		return to
+	return null
 
 func get_name() -> String:
 	return "Border " + str(from) + ":" + str(to)

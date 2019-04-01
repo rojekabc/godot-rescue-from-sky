@@ -41,16 +41,55 @@ func list_borders(pos : Vector2) -> Dictionary:
 	return result
 	
 func scan_border(border : Border):
-	if border.is_attacking():
+	if border.is_attacking() && border.random_attack():
 		var attackPoint : Vector2 = border.get_attack_point(ownerMap)
+		if attackPoint == null: # if it's already attacked
+			return
 		# TODO: VERY SIMPLE BORDER MOVE.
-		var borders = list_borders(attackPoint)
 		ownerMap.set_at(attackPoint, border.get_win_player())
-		for borderDirection in borders:
-			var tborder = borders[borderDirection]
-			if borders[borderDirection]:
-				tborder.destroy()
-			else:
-				var newBorder = ownerMap.create_border(attackPoint, attackPoint + borderDirection)
+		attack_move_power_reduce(border, attackPoint)
+	pass
+
+func attack_move_power_reduce(border : Border, attackPoint : Vector2):
+	var newPower : PoolRealArray
+	for i in range(0, border.playerPower.size()):
+		if i == border.get_win_player():
+			newPower.append(border.playerPower[i] - Game.borderPowerReduceAttacker)
+		else:
+			newPower.append(border.playerPower[i] - Game.borderPowerReduceDefender)
+	var borders = list_borders(attackPoint)
+	for borderDirection in borders:
+		var tborder = borders[borderDirection]
+		if borders[borderDirection]:
+			tborder.destroy()
+		else:
+			var newBorder = ownerMap.create_border(attackPoint, attackPoint + borderDirection)
+			if newBorder:
+				newBorder.set_powers(newPower)
 				scannedNode.add_child(newBorder)
 	pass
+
+# move power from current attacking border to newly created without change
+func attack_move_power(border : Border, attackPoint : Vector2):
+	var borders = list_borders(attackPoint)
+	for borderDirection in borders:
+		var tborder = borders[borderDirection]
+		if borders[borderDirection]:
+			tborder.destroy()
+		else:
+			var newBorder = ownerMap.create_border(attackPoint, attackPoint + borderDirection)
+			if newBorder:
+				newBorder.set_powers(border.playerPower)
+				scannedNode.add_child(newBorder)
+
+# only border move, power will not move
+func attack_base(attackPoint : Vector2):
+	var borders = list_borders(attackPoint)
+	for borderDirection in borders:
+		var tborder = borders[borderDirection]
+		if borders[borderDirection]:
+			tborder.destroy()
+		else:
+			var newBorder = ownerMap.create_border(attackPoint, attackPoint + borderDirection)
+			if newBorder:
+				scannedNode.add_child(newBorder)
