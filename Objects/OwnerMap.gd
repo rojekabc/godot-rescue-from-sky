@@ -22,6 +22,25 @@ func _init():
 	# else: map[pos] = 0
 	pass
 
+#func get_corners(mapPoint : Vector2) -> PoolVector2Array:
+#	var result : PoolVector2Array
+#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT))
+#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH + PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT))
+#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT + PIXEL_HEIGHT))
+#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH + PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT + PIXEL_HEIGHT))
+#	return result
+
+# Get owner of direct pixel position
+func get_owner_of(mapPoint : Vector2) -> int:
+	var mapPos : Vector2
+	mapPos.x = int(mapPoint.x) / PIXEL_WIDTH
+	mapPos.y = int(mapPoint.y) / PIXEL_HEIGHT
+	return get_at(mapPos)
+
+# Get centrum position of map element
+func get_pixel_position_of(mapPoint : Vector2) -> Vector2:
+	return Vector2(mapPoint.x * PIXEL_WIDTH + PIXEL_WIDTH/2, mapPoint.y * PIXEL_HEIGHT + PIXEL_HEIGHT/2)
+
 func get_at(pos : Vector2) -> int:
 	return map[pos.x + pos.y*WIDTH]
 
@@ -40,6 +59,7 @@ func create_border(from : Vector2, to : Vector2):
 			return null
 	var diff : Vector2 = from - to
 	var border : Area2D = Game.Border.duplicate().setup(from, to)
+	border.collision_layer = Game.BORDER_COLLISION_LAYER
 	match diff:
 		Vector2.DOWN:
 				border.position = Vector2(from.x*PIXEL_WIDTH + PIXEL_WIDTH/2, from.y*PIXEL_HEIGHT)

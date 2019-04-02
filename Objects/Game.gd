@@ -17,6 +17,14 @@ var Squad : Area2D
 var Army : Area2D
 var Border : Area2D
 
+const STRUCTURE_COLLISION_LAYER = 1
+const TRANSPORT_COLLISION_LAYER = 2
+const BORDER_COLLISION_LAYER = 4
+const ARMY_COLLISION_LAYER = 8
+const SQUAD_COLLISION_LAYER = 16
+
+const BORDER_COLLISION_MASK = STRUCTURE_COLLISION_LAYER
+const ALL_COLLISION_MASK = STRUCTURE_COLLISION_LAYER | TRANSPORT_COLLISION_LAYER | BORDER_COLLISION_LAYER | ARMY_COLLISION_LAYER | SQUAD_COLLISION_LAYER
 # Objects
 #warning-ignore:unused_class_variable
 var AirPlane = preload('res://Objects/AirPlane.gd')
@@ -105,8 +113,8 @@ func verbose(msg):
 	if CONFIGURATION.verbose:
 		print(str(timetick) + ' : ' + msg)
 
-func getWorld():
-	return get_tree().get_root().get_node('World')
+func getWorld() -> GameWorld:
+	return get_tree().get_root().get_node('World') as GameWorld
 
 func getTimer():
 	return get_tree().get_root().get_node('World/Timer')

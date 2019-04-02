@@ -45,8 +45,14 @@ func scan_border(border : Border):
 		var attackPoint : Vector2 = border.get_attack_point(ownerMap)
 		if attackPoint == null: # if it's already attacked
 			return
-		# TODO: VERY SIMPLE BORDER MOVE.
+		# Change side of attacked point
 		ownerMap.set_at(attackPoint, border.get_win_player())
+		var attackPosition : Vector2 = ownerMap.get_pixel_position_of(attackPoint)
+		var structure : Structure = Game.getWorld()._find_element_at(attackPosition, Game.STRUCTURE_COLLISION_LAYER)
+		if structure:
+			Game.verbose(get_name() + ' take structure ' + structure.get_name())
+			structure.update_owner(ownerMap)
+		# Move borders
 		attack_move_power_reduce(border, attackPoint)
 	pass
 
