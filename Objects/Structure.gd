@@ -116,6 +116,7 @@ func update_owner(ownerMap : OwnerMap):
 			Destructable.set_hp(Destructable.HP_MAX)
 			assign_owner((ownerIdx + 1) % 2)
 			# TODO recalculate trasnport chain
+			# TODO start repair
 		1, 2:
 			# Stop production - destroy
 			Destructable.set_hp(Destructable.HP_DESTROYED)
@@ -123,7 +124,7 @@ func update_owner(ownerMap : OwnerMap):
 			# Half of production - half of health
 			Destructable.set_hp(Destructable.HP_MAX/2)
 		4:
-			# TODO Start repair - now fully repair
+			# TODO start repair - now fully repair
 			Destructable.set_hp(Destructable.HP_MAX)
 	pass
 
