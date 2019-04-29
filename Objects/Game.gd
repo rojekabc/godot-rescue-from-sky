@@ -51,6 +51,8 @@ const TEST_CONFIGURATION = {
 		squadTransportBombardDestoryChance = 100,
 		squadFighterHitPoints = 60,
 		squadBomberHitPoints = 5,
+		squadBorderBombardAddPower = 5,
+		squadBorderBombardHitPoints = 5,
 		timertick = 1,
 		borderScannerTick = 3,
 		armyPower = 20,
@@ -73,6 +75,8 @@ const GAME_CONFIGURATION = {
 		squadTransportBombardDestoryChance = 30,
 		squadFighterHitPoints = 30,
 		squadBomberHitPoints = 5,
+		squadBorderBombardAddPower = 5,
+		squadBorderBombardHitPoints = 5,
 		timertick = 5,
 		BorderScannerTick = 3,
 		armyPower = 20,
@@ -116,8 +120,11 @@ func verbose(msg):
 func getWorld() -> GameWorld:
 	return get_tree().get_root().get_node('World') as GameWorld
 
-func getTimer():
-	return get_tree().get_root().get_node('World/Timer')
+func getTimer() -> Timer:
+	return get_tree().get_root().get_node('World/Timer') as Timer
+
+func getTween() -> Tween:
+	return get_tree().get_root().get_node('World/Tween') as Tween
 
 func _ready():
 	structureDefinitions[STRUCTURE.CITY] = {

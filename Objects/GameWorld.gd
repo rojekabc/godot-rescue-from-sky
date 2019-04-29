@@ -112,23 +112,6 @@ func find_elements_at_points(globalPositions : PoolVector2Array, collisionMask :
 		Tool.array_appendAll(elements, find_elements_at(position, collisionMask))
 	return  elements
 
-#func _find_structure_at(global_position):
-#	for structure in $Map/Structures.get_children():
-#		var rect = Rect2(
-#			structure.global_position.x-structure.HALF_SIZE, structure.global_position.y-structure.HALF_SIZE,
-#			structure.FULL_SIZE, structure.FULL_SIZE)
-#		if rect.has_point(global_position):
-#			return structure;
-#	return null
-
-#func _find_structures_at(global_positions):
-#	var result = []
-#	for pos in global_positions:
-#		var structure = _find_structure_at(pos)
-#		if structure:
-#			result.append(structure)
-#	return result
-
 func _prepare_materials():
 	Game.neutralMaterial = Game.Border.get_node('Sprite').material
 	for playerDefinition in Game.playerDefinitions:
@@ -185,7 +168,7 @@ func ui_squad_panel(airport):
 func squad_start(source, target, planes):
 	var squad = Game.Squad.duplicate()
 	squad.collision_layer = Game.SQUAD_COLLISION_LAYER
-	squad.collision_mask = Game.SQUAD_COLLISION_LAYER # detect moveable squads
+	squad.collision_mask = Game.SQUAD_COLLISION_LAYER | Game.TRANSPORT_COLLISION_LAYER # detect moveable squads/transports
 	squad.visible = true
 	squad.position = source.position
 	squad.ownerIdx = source.ownerIdx
@@ -196,7 +179,6 @@ func squad_start(source, target, planes):
 	squad.PlaneHolder.add_planes(planes)
 	$Map/Squads.add_child(squad)
 	_calculate_move_tween(squad)
-
 
 func _calculate_move_tween(moveObject):
 	var move = moveObject.Moveable.calculate_move()
@@ -224,13 +206,9 @@ func _tween_completed(object, key):
 	elif object.is_in_group("Squad"):
 		$Tween.remove(object, key)
 		if object.position == object.Moveable.target.position:
-			# Good for static target
 			object.catch_target()
-			_calculate_full_move_tween(object)
 		else:
-			# Good for moving target - catch will be done by colision
-			_calculate_move_tween(object)
-			object.reset_rotation()
+			object.follow_target()
 	elif object.is_in_group("Army"):
 		$Tween.remove(object, key)
 		var target = object.get_target()
