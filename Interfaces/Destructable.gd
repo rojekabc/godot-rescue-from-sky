@@ -23,10 +23,14 @@ func update_hp(pointsChange : int):
 	set_hp(hp + pointsChange)
 
 func set_hp(points : int):
+	var prevHp : int = hp
 	hp = clamp(points, HP_DESTROYED, HP_MAX)
 	Game.verbose(object.get_name() + ' Set HP to ' + str(points))
+	if object.has_method('change_health'):
+		object.call('change_health', prevHp, hp)
 	if is_destroyed() and destroyFunc and object.has_method(destroyFunc):
 		object.call(destroyFunc)
+	
 
 func heal(points : int):
 	set_hp(hp + points)

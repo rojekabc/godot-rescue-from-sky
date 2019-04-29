@@ -4,6 +4,11 @@ func children_action(parent, action):
 	for child in parent.get_children():
 		child.call(action)
 
+func array_appendAll(array : Array, srcArray : Array) -> Array:
+	for srcElement in srcArray:
+		array.append(srcElement)
+	return array
+
 func array_random(array : Array):
 	return array[randi() % array.size()]
 

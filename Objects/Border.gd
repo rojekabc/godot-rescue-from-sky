@@ -12,6 +12,12 @@ var playerPower : PoolRealArray = PoolRealArray()
 var neutral : bool
 var winPlayer : int
 
+func toString():
+	var result : String = 'Border: \r\n'
+	for i in playerPower.size():
+		result += '\t' + Game.playerDefinitions[i].name + ' power ' + str(playerPower[i]) + '\r\n'
+	return result
+
 func setup(from : Vector2, to : Vector2) -> Border:
 	self.from = from
 	self.to = to

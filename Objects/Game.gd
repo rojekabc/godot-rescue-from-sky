@@ -37,11 +37,11 @@ var Destructable = preload('res://Interfaces/Destructable.gd')
 #warning-ignore:unused_class_variable
 var Consumer = preload('res://Interfaces/Consumer.gd')
 #warning-ignore:unused_class_variable
-var Producer = preload('res://Interfaces/Producer.gd')
+var Producer = load('res://Interfaces/Producer.gd')
 
 const TEST_CONFIGURATION = {
 		verbose = true,
-		loggers = [],
+		loggers = ['ClickLog'],
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
@@ -124,7 +124,7 @@ func _ready():
 		name = 'City',
 		type = STRUCTURE.CITY,
 		acronym = 'C',
-		consumes = [RESOURCE.FOOD],
+		consumes = [],
 		produces = [RESOURCE.MANPOWER]
 	}
 	structureDefinitions[STRUCTURE.VILLAGE] = {
@@ -138,7 +138,7 @@ func _ready():
 		name = 'Bunker',
 		type = STRUCTURE.BUNKER,
 		acronym = 'B',
-		consumes = [RESOURCE.FOOD, RESOURCE.MANPOWER],
+		consumes = [],
 		produces = [RESOURCE.ARMY]
 	}
 	structureDefinitions[STRUCTURE.AIRPORT] = {
@@ -152,14 +152,14 @@ func _ready():
 		name = 'Factory',
 		type = STRUCTURE.FACTORY,
 		acronym = 'F',
-		consumes = [RESOURCE.MANPOWER],
+		consumes = [],
 		produces = [RESOURCE.AIRPLANE]
 	}
 	structureDefinitions[STRUCTURE.CAPITAL] = {
 		name = 'Capital',
 		type = STRUCTURE.CAPITAL,
 		acronym = 'HQ',
-		consumes = [RESOURCE.FOOD, RESOURCE.MANPOWER],
+		consumes = [],
 		produces = [RESOURCE.MANPOWER, RESOURCE.ARMY]
 	}
 	

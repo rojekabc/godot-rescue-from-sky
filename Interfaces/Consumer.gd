@@ -1,3 +1,4 @@
+class_name Consumer
 var object
 
 var consumes = {}
@@ -9,10 +10,9 @@ func _init(obj):
 func list():
 	return consumes.keys()
 
-func set_suplier(resource, suplier):
-	consumes[resource].suplier = suplier
-	
 func add(resource):
+	if consumes.has(resource):
+		return
 	consumes[resource] = {
 		resource = resource,
 		has = false,
@@ -35,6 +35,8 @@ func wait(resource):
 
 func consume(resource):
 	clear(resource)
+	Game.getWorld().getResourceDistribution().register_consumer(resource, object)
+
 	
 func clear(resource):
 	var consumedResource = consumes[resource]

@@ -14,12 +14,26 @@ var Destructable : Destructable
 var Consumer
 var Producer
 
+var LOG = Game.CONFIGURATION.loggers.has('Structure')
+
 signal object_destroyed(object)
 signal update_planes(object, planesData)
 
 func destroy():
 	emit_signal('object_destroyed', self)
 
+# callback function
+func change_health(prevHp : int, curHp : int):
+	# check state is changed (produce, not produce)
+	var prevProduce : bool = float(prevHp)/float(Destructable.HP_MAX) >= 0.5
+	var curProduce : bool = float(curHp)/float(Destructable.HP_MAX) >= 0.5
+	if prevProduce != curProduce:
+		if curProduce:
+			Game.verbose(get_name() + ' produce enable')
+			Game.getWorld().getResourceDistribution().register_structure(self)
+		else:
+			Game.verbose(get_name() + ' produce disable')
+			Game.getWorld().getResourceDistribution().unregister_structure(self)
 
 func _init():
 	Destructable = Game.Destructable.new(self)
@@ -58,6 +72,7 @@ func setup(type, ownerIdx, timer) -> Structure:
 	self.ownerIdx = ownerIdx
 	assign_type(type, timer)
 	assign_owner(ownerIdx)
+	timer.connect('timeout', self, '_timeout')
 	return self
 
 func assign_owner(ownerIdx):
@@ -78,7 +93,6 @@ func assign_type(strType, timer):
 	match type:
 		Game.STRUCTURE.AIRPORT: $Sprite.texture = load('res://Resources/StructureAirport.png')
 		Game.STRUCTURE.CITY: $Sprite.texture = load('res://Resources/StructureCity.png')
-	timer.connect('timeout', self, '_timeout')
 	for resource in strDef.consumes:
 		Consumer.add(resource)
 	for resource in strDef.produces:
@@ -112,10 +126,9 @@ func update_owner(ownerMap : OwnerMap):
 	if ownerMap.get_at(Vector2(mapPosition.x + 1, mapPosition.y + 1)) == self.ownerIdx: keep += 1
 	match keep:
 		0:
-			# Change owner
-			Destructable.set_hp(Destructable.HP_MAX)
+			# Change owner - first assign owner, after set HP structure will be registered as a consumer
 			assign_owner((ownerIdx + 1) % 2)
-			# TODO recalculate trasnport chain
+			Destructable.set_hp(Destructable.HP_MAX)
 			# TODO start repair
 		1, 2:
 			# Stop production - destroy

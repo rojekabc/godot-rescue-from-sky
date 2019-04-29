@@ -22,14 +22,6 @@ func _init():
 	# else: map[pos] = 0
 	pass
 
-#func get_corners(mapPoint : Vector2) -> PoolVector2Array:
-#	var result : PoolVector2Array
-#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT))
-#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH + PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT))
-#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT + PIXEL_HEIGHT))
-#	result.append(Vector2(mapPoint.x * PIXEL_WIDTH + PIXEL_WIDTH, mapPoint.y * PIXEL_HEIGHT + PIXEL_HEIGHT))
-#	return result
-
 # Get owner of direct pixel position
 func get_owner_of(mapPoint : Vector2) -> int:
 	var mapPos : Vector2

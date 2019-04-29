@@ -4,6 +4,8 @@ class_name GameWorld
 var selectTarget = null
 var ownerMap : OwnerMap
 
+var CLICKLOG = Game.CONFIGURATION.loggers.has('ClickLog')
+
 func _ready():
 	# Enable randomization
 	randomize()
@@ -35,16 +37,26 @@ func _fail(msg):
 	
 func _input(event):
 	if event is InputEventMouseButton and event.is_pressed() and event.button_index == BUTTON_LEFT:
-		if selectTarget:
-			_select_target_action(event.global_position)
-		elif $Map/UI/Suqad.visible:
-			return
+		mouse_pressed_at(event.global_position)
+
+func mouse_pressed_at(globalPosition : Vector2) -> void:
+	if CLICKLOG: log_information(globalPosition)
+	
+	if selectTarget:
+		_select_target_action(globalPosition)
+	elif $Map/UI/Suqad.visible:
+		return
+	else:
+		var structure : Structure = _find_element_at(globalPosition, Game.STRUCTURE_COLLISION_LAYER)
+		if structure: structure.pressed(self)
+
+func log_information(globalPosition : Vector2) -> void:
+	var elements : Array = find_elements_at(globalPosition)
+	for element in elements:
+		if element.has_method('toString'):
+			Game.verbose(element.toString())
 		else:
-			var strPressed = _find_structure_at(event.global_position)
-			if strPressed:
-				strPressed.pressed(self)
-				return
-	pass
+			Game.verbose(str(element))
 
 func _select_target_action(globalPosition):
 	var target = _find_element_at(globalPosition)
@@ -54,7 +66,7 @@ func _select_target_action(globalPosition):
 		if target == selectTarget.source:
 			return _fail('Cannot select itself')
 		if target.ownerIdx == selectTarget.source.ownerIdx:
-			if target.type == Game.AIRPORT:
+			if target.type == Game.Structure.AIRPORT:
 				_info('Planned move to ' + target.get_name())
 			else:
 				return _fail('Unknown mission against your structure')
@@ -81,29 +93,41 @@ func _select_target_action(globalPosition):
 # Find element under point. From the list the structure will be always selected as more priority.
 # If nothing from possible elements (Structure, Transport) return null
 func _find_element_at(globalPosition, collisionMask = Game.ALL_COLLISION_MASK) -> Area2D:
-	var selected = null
+	var elements : Array = find_elements_at(globalPosition, collisionMask)
+	if elements.empty():
+		return null
+	return elements[0]
+
+func find_elements_at(globalPosition : Vector2, collisionMask : int = Game.ALL_COLLISION_MASK) -> Array:
+	var elements : Array = []
 	var results = get_world_2d().direct_space_state.intersect_point(globalPosition, 4, [], collisionMask, true, true)
 	if results:
 		for result in results:
-			return result.collider
-	return null
+			elements.append(result.collider)
+	return elements
 
-func _find_structure_at(global_position):
-	for structure in $Map/Structures.get_children():
-		var rect = Rect2(
-			structure.global_position.x-structure.HALF_SIZE, structure.global_position.y-structure.HALF_SIZE,
-			structure.FULL_SIZE, structure.FULL_SIZE)
-		if rect.has_point(global_position):
-			return structure;
-	return null
+func find_elements_at_points(globalPositions : PoolVector2Array, collisionMask : int = Game.ALL_COLLISION_MASK) -> Array:
+	var elements : Array = []
+	for position in globalPositions:
+		Tool.array_appendAll(elements, find_elements_at(position, collisionMask))
+	return  elements
 
-func _find_structures_at(global_positions):
-	var result = []
-	for pos in global_positions:
-		var structure = _find_structure_at(pos)
-		if structure:
-			result.append(structure)
-	return result
+#func _find_structure_at(global_position):
+#	for structure in $Map/Structures.get_children():
+#		var rect = Rect2(
+#			structure.global_position.x-structure.HALF_SIZE, structure.global_position.y-structure.HALF_SIZE,
+#			structure.FULL_SIZE, structure.FULL_SIZE)
+#		if rect.has_point(global_position):
+#			return structure;
+#	return null
+
+#func _find_structures_at(global_positions):
+#	var result = []
+#	for pos in global_positions:
+#		var structure = _find_structure_at(pos)
+#		if structure:
+#			result.append(structure)
+#	return result
 
 func _prepare_materials():
 	Game.neutralMaterial = Game.Border.get_node('Sprite').material
@@ -129,44 +153,11 @@ func _map_create():
 			if structure.type == Game.STRUCTURE.AIRPORT:
 				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.PLANE.FIGHTER))
 				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.PLANE.BOMBER))
-			while not _find_structures_at(structure.get_corners()).empty():
+			while not find_elements_at_points(structure.get_corners(), Game.STRUCTURE_COLLISION_LAYER).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx, $Map/OwnerMap)
 			$Map/Structures.add_child(structure)
-	_create_resource_network()
-
-# Create consumer-suplier network
-func _create_resource_network():
-	for structure in $Map/Structures.get_children():
-		for consume in structure.Consumer.list():
-			var suppliers = _find_producers_of(structure.ownerIdx, consume)
-			var supplier = _find_best_supplier(structure, suppliers)
-			if supplier:
-				structure.set_suplier(consume, supplier)
-				supplier.register_consumer(consume, structure)
-
-func _find_best_supplier(structure, suppliers):
-	if (suppliers == null) or suppliers.empty():
-		return null
-	var bestSuplierDistance = 1000000
-	var bestSupplierIdx = -1
-	var suplierIdx = 0
-	for suplier in suppliers:
-		var distance = (structure.position - suplier.position).length()
-		if distance < bestSuplierDistance:
-			bestSuplierDistance = distance
-			bestSupplierIdx = suplierIdx
-		suplierIdx += 1
-	return suppliers[bestSupplierIdx]
-
-func _find_producers_of(ownerIdx, resource):
-	var result = []
-	for structure in $Map/Structures.get_children():
-		if structure.ownerIdx != ownerIdx:
-			continue
-		if structure.Producer.is_producing(resource):
-			result.append(structure)
-	return result
+			$Map/ResourceDistribution.register_structure(structure)
 
 func _fix_panel_position(panel, callerPosition):
 	# positioning
@@ -194,6 +185,7 @@ func ui_squad_panel(airport):
 func squad_start(source, target, planes):
 	var squad = Game.Squad.duplicate()
 	squad.collision_layer = Game.SQUAD_COLLISION_LAYER
+	squad.collision_mask = Game.SQUAD_COLLISION_LAYER # detect moveable squads
 	squad.visible = true
 	squad.position = source.position
 	squad.ownerIdx = source.ownerIdx
@@ -215,7 +207,7 @@ func _calculate_move_tween(moveObject):
 
 func _calculate_full_move_tween(moveObject):
 	var distance = (moveObject.Moveable.target.position - moveObject.position).length()
-	var time = distance/Game.CONFIGURATION.transportSpeed*$Timer.wait_time
+	var time = distance/moveObject.Moveable.speed*$Timer.wait_time
 	$Tween.interpolate_property(
 		moveObject, "position",
 		moveObject.position, moveObject.Moveable.target.position,
@@ -231,14 +223,23 @@ func _tween_completed(object, key):
 		# $Tween.remove(object, key)
 	elif object.is_in_group("Squad"):
 		$Tween.remove(object, key)
-		_calculate_move_tween(object)
-		object.reset_rotation()
+		if object.position == object.Moveable.target.position:
+			# Good for static target
+			object.catch_target()
+			_calculate_full_move_tween(object)
+		else:
+			# Good for moving target - catch will be done by colision
+			_calculate_move_tween(object)
+			object.reset_rotation()
 	elif object.is_in_group("Army"):
 		$Tween.remove(object, key)
 		var target = object.get_target()
 		target.change_power(object.ownerIdx, Game.CONFIGURATION.armyPower * object.get_hp_rate())
 		object.destroy()
 	pass
+
+func getResourceDistribution() -> ResourceDistribution:
+	return $Map/ResourceDistribution as ResourceDistribution
 
 func transport_start(sourceStructure, targetStructure, transportedResource):
 	var transport = _transport_create(sourceStructure, targetStructure, transportedResource)
@@ -250,7 +251,11 @@ func transport_start(sourceStructure, targetStructure, transportedResource):
 	transport.position = sourceStructure.position
 	$Map/Transports.add_child(transport)
 	_calculate_full_move_tween(transport)
-	
+	if sourceStructure.LOG: Game.verbose(
+		sourceStructure.get_name()
+		+ " send " + Game.resourceDefinitions[transportedResource].name
+		+ " to " + targetStructure.get_name())
+
 func _transport_create(sourceStructure, targetStructure, transportedResource):
 	var transport : Area2D = Game.Transport.duplicate()
 	transport.collision_layer = Game.TRANSPORT_COLLISION_LAYER

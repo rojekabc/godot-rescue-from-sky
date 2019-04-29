@@ -25,6 +25,11 @@ _global_script_classes=[ {
 "path": "res://Objects/BorderScanner.gd"
 }, {
 "base": "Reference",
+"class": "Consumer",
+"language": "GDScript",
+"path": "res://Interfaces/Consumer.gd"
+}, {
+"base": "Reference",
 "class": "Destructable",
 "language": "GDScript",
 "path": "res://Interfaces/Destructable.gd"
@@ -39,6 +44,11 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://Objects/OwnerMap.gd"
 }, {
+"base": "Node",
+"class": "ResourceDistribution",
+"language": "GDScript",
+"path": "res://Objects/ResourceDistribution.gd"
+}, {
 "base": "Area2D",
 "class": "Structure",
 "language": "GDScript",
@@ -48,9 +58,11 @@ _global_script_class_icons={
 "AirPlane": "",
 "Border": "",
 "BorderScanner": "",
+"Consumer": "",
 "Destructable": "",
 "GameWorld": "",
 "OwnerMap": "",
+"ResourceDistribution": "",
 "Structure": ""
 }
 

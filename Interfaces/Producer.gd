@@ -1,6 +1,6 @@
 var LOG = Game.CONFIGURATION.loggers.has('Producer')
 
-var object
+var object : Structure
 
 var produces = {}
 
@@ -22,14 +22,7 @@ func add_resource(resource):
 		producing = false,
 		has = false,
 		timeout = resourceDefinition.timeout,
-		consumers = [],
-		lastConsumer = null
 	}
-
-func add_consumer(resource, consumer):
-	if produces.has(resource):
-		var produce = produces[resource]
-		produce.consumers.append(consumer)
 
 func timeout():
 	if object.Destructable.is_destroyed():
@@ -39,7 +32,7 @@ func timeout():
 
 func _produced_resource_timeout(produce):
 	if produce.has:
-		_produced_resource_distribute(produce)
+		Game.getWorld().getResourceDistribution().register_resource(produce.resource, object)
 	elif produce.producing:
 		_produced_resource_produce_tick(produce)
 	elif _produced_resource_has_resources(produce):
@@ -77,22 +70,6 @@ func _produced_resource_start_production(produce):
 	if LOG: Game.verbose(
 		object.get_name()
 		 + " start production of " + Game.resourceDefinitions[produce.resource].name)
-
-func _produced_resource_distribute(produce):
-	var availableConsumers = []
-	for consumer in produce.consumers:
-		if consumer.Consumer.can_send(produce.resource):
-			availableConsumers.append(consumer)
-	if availableConsumers.empty():
-		return
-	var consumer = Tool.array_random(availableConsumers)
-	if LOG: Game.verbose(
-		object.get_name()
-		+ " send " + Game.resourceDefinitions[produce.resource].name
-		+ " to " + consumer.get_name())
-	Game.getWorld().transport_start(object, consumer, produce.resource)
-	produce.has = false
-	consumer.Consumer.wait(produce.resource)
 
 func _init(obj):
 	self.object = obj
