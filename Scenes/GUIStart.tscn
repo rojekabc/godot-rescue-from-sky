@@ -1,0 +1,82 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=1]
+[ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=2]
+[ext_resource path="res://Resources/RedSide.png" type="Texture" id=3]
+[ext_resource path="res://Resources/BlueSide.png" type="Texture" id=4]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Control
+
+func _ready():
+	$PanelContainer/VBoxContainer/Start.connect('pressed', self, \"start_pressed\")
+
+func start_pressed():
+	Game.humanPlayer.playerName = $PanelContainer/VBoxContainer/PlayerName/LineEdit.text
+	if $PanelContainer/VBoxContainer/Side.pressed:
+		Game.humanPlayer.playerIdx = 0
+	else:
+		Game.humanPlayer.playerIdx = 1
+	var playerDefinition = Game.playerDefinitions[Game.humanPlayer.playerIdx]
+	playerDefinition.name = Game.humanPlayer.playerName
+	Game.changeScene(Game.SCENE.GAME)"
+
+[node name="GUIStart" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 0.902527
+margin_top = 0.902512
+margin_right = 0.902588
+margin_bottom = 0.902527
+script = SubResource( 1 )
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -113.0
+margin_top = -68.0
+margin_right = 113.0
+margin_bottom = 68.0
+custom_styles/panel = ExtResource( 1 )
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 216.0
+margin_bottom = 126.0
+
+[node name="PlayerName" type="HSplitContainer" parent="PanelContainer/VBoxContainer"]
+margin_right = 206.0
+margin_bottom = 37.0
+
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/PlayerName"]
+margin_top = 5.0
+margin_right = 50.0
+margin_bottom = 32.0
+custom_fonts/font = ExtResource( 2 )
+text = "Name"
+
+[node name="LineEdit" type="LineEdit" parent="PanelContainer/VBoxContainer/PlayerName"]
+margin_left = 62.0
+margin_right = 206.0
+margin_bottom = 37.0
+custom_fonts/font = ExtResource( 2 )
+
+[node name="Side" type="CheckButton" parent="PanelContainer/VBoxContainer"]
+margin_top = 41.0
+margin_right = 206.0
+margin_bottom = 79.0
+custom_icons/off = ExtResource( 3 )
+custom_icons/on = ExtResource( 4 )
+custom_fonts/font = ExtResource( 2 )
+text = "Conflict Side "
+
+[node name="Start" type="Button" parent="PanelContainer/VBoxContainer"]
+margin_top = 83.0
+margin_right = 206.0
+margin_bottom = 116.0
+custom_fonts/font = ExtResource( 2 )
+text = "Start"
+

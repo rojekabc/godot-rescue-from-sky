@@ -48,7 +48,8 @@ func mouse_pressed_at(globalPosition : Vector2) -> void:
 		return
 	else:
 		var structure : Structure = _find_element_at(globalPosition, Game.STRUCTURE_COLLISION_LAYER)
-		if structure: structure.pressed(self)
+		if structure && structure.ownerIdx == Game.humanPlayer.playerIdx:
+			structure.pressed(self)
 
 func log_information(globalPosition : Vector2) -> void:
 	var elements : Array = find_elements_at(globalPosition)

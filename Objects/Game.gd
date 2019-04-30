@@ -25,6 +25,8 @@ const SQUAD_COLLISION_LAYER = 16
 
 const BORDER_COLLISION_MASK = STRUCTURE_COLLISION_LAYER
 const ALL_COLLISION_MASK = STRUCTURE_COLLISION_LAYER | TRANSPORT_COLLISION_LAYER | BORDER_COLLISION_LAYER | ARMY_COLLISION_LAYER | SQUAD_COLLISION_LAYER
+
+enum SCENE {START, GAME}
 # Objects
 #warning-ignore:unused_class_variable
 var AirPlane = preload('res://Objects/AirPlane.gd')
@@ -38,6 +40,8 @@ var Destructable = preload('res://Interfaces/Destructable.gd')
 var Consumer = preload('res://Interfaces/Consumer.gd')
 #warning-ignore:unused_class_variable
 var Producer = load('res://Interfaces/Producer.gd')
+
+var humanPlayer : HumanPlayer = load('res://Objects/HumanPlayer.gd').new() as HumanPlayer
 
 const TEST_CONFIGURATION = {
 		verbose = true,
@@ -125,6 +129,13 @@ func getTimer() -> Timer:
 
 func getTween() -> Tween:
 	return get_tree().get_root().get_node('World/Tween') as Tween
+
+func changeScene(scene : int) -> void:
+	match scene:
+		SCENE.START:
+			get_tree().change_scene('res://Scenes/GUIStart,tscn')
+		SCENE.GAME:
+			get_tree().change_scene('res://Scenes/World.tscn')
 
 func _ready():
 	structureDefinitions[STRUCTURE.CITY] = {
