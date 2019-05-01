@@ -12,14 +12,32 @@ func _ready():
 	$PanelContainer/VBoxContainer/Start.connect('pressed', self, \"start_pressed\")
 
 func start_pressed():
-	Game.humanPlayer.playerName = $PanelContainer/VBoxContainer/PlayerName/LineEdit.text
+	var humanPlayer = create_human_player()
+	var aiPlayer = create_ai_player()
+	
+	humanPlayer.name = $PanelContainer/VBoxContainer/PlayerName/LineEdit.text
 	if $PanelContainer/VBoxContainer/Side.pressed:
-		Game.humanPlayer.playerIdx = 0
+		humanPlayer.color = Color(0.2, 0.0, 0.6, 0.5)
+		aiPlayer.color = Color(0.6, 0.0, 0.2, 0.5)
+		Game.playerDefinitions.append(humanPlayer)
+		Game.playerDefinitions.append(aiPlayer)
 	else:
-		Game.humanPlayer.playerIdx = 1
-	var playerDefinition = Game.playerDefinitions[Game.humanPlayer.playerIdx]
-	playerDefinition.name = Game.humanPlayer.playerName
-	Game.changeScene(Game.SCENE.GAME)"
+		humanPlayer.color = Color(0.6, 0.0, 0.2, 0.5)
+		aiPlayer.color = Color(0.2, 0.0, 0.6, 0.5)
+		Game.playerDefinitions.append(aiPlayer)
+		Game.playerDefinitions.append(humanPlayer)
+	Game.changeScene(Game.SCENE.GAME)
+
+func create_human_player() -> Player:
+	var player : Player = Player.new()
+	player.type = Player.PlayerType.HUMAN_PLAYER
+	return player
+
+func create_ai_player() -> Player:
+	var player : Player = Player.new()
+	player.type = Player.PlayerType.AI_PLAYER
+	player.name = Tool.array_random(['Zygfryd', 'Godfryd'])
+	return player"
 
 [node name="GUIStart" type="Control"]
 anchor_right = 1.0

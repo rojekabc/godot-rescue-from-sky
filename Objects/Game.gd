@@ -41,8 +41,6 @@ var Consumer = preload('res://Interfaces/Consumer.gd')
 #warning-ignore:unused_class_variable
 var Producer = load('res://Interfaces/Producer.gd')
 
-var humanPlayer : HumanPlayer = load('res://Objects/HumanPlayer.gd').new() as HumanPlayer
-
 const TEST_CONFIGURATION = {
 		verbose = true,
 		loggers = ['ClickLog'],
@@ -205,15 +203,7 @@ func _ready():
 		timeout = 20,
 		acronym = 'A'
 	}
-	playerDefinitions.append({
-			name = 'Zygfryd',
-			color = Color(0.2, 0.0, 0.6, 0.5)
-	})
-	playerDefinitions.append({
-			name = 'Godfryd',
-			color = Color(0.6, 0.0, 0.2, 0.5)
-	})
-
+	
 	# Scenes
 	Structure = load('res://Scenes/Structure.tscn').instance()
 	Transport = load('res://Scenes/Transport.tscn').instance()
