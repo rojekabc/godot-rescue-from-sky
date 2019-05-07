@@ -45,6 +45,9 @@ func target_destroyed(target):
 func get_name():
 	return Game.playerDefinitions[Moveable.source.ownerIdx].name + \".transport.\" + Game.resourceDefinitions[resource].name
 
+func get_info():
+	return Game.playerDefinitions[Moveable.source.ownerIdx].name + \" transport of \" + Game.resourceDefinitions[resource].name
+
 # destroy after hit
 func destroy():
 	emit_signal('object_destroyed', self)
@@ -105,4 +108,3 @@ custom_fonts/font = ExtResource( 3 )
 text = "X"
 align = 1
 valign = 1
-

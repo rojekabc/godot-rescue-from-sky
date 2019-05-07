@@ -150,6 +150,9 @@ func attack_planes(squadPlanes, targetPlanes):
 func get_type():
 	return type
 
+func get_info():
+	return Game.playerDefinitions[ownerIdx].name + ' squad'
+
 func _body_entered(body):
 	if Moveable.target == body:
 		catch_target()
@@ -177,4 +180,3 @@ texture = ExtResource( 2 )
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 visible = false
 shape = SubResource( 3 )
-

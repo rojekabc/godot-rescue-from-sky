@@ -22,4 +22,3 @@ shape = SubResource( 1 )
 [node name="Sprite" type="Sprite" parent="."]
 material = SubResource( 2 )
 texture = ExtResource( 3 )
-

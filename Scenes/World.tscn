@@ -1,13 +1,14 @@
-[gd_scene load_steps=11 format=2]
+[gd_scene load_steps=12 format=2]
 
 [ext_resource path="res://Objects/GameWorld.gd" type="Script" id=1]
 [ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=2]
 [ext_resource path="res://Resources/TitleStyle.tres" type="StyleBox" id=3]
 [ext_resource path="res://Resources/TitleFont.tres" type="DynamicFont" id=4]
 [ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=5]
-[ext_resource path="res://Objects/BorderScanner.gd" type="Script" id=6]
-[ext_resource path="res://Objects/OwnerMap.gd" type="Script" id=7]
-[ext_resource path="res://Objects/ResourceDistribution.gd" type="Script" id=8]
+[ext_resource path="res://Resources/StatusFont.tres" type="DynamicFont" id=6]
+[ext_resource path="res://Objects/BorderScanner.gd" type="Script" id=7]
+[ext_resource path="res://Objects/OwnerMap.gd" type="Script" id=8]
+[ext_resource path="res://Objects/ResourceDistribution.gd" type="Script" id=9]
 
 [sub_resource type="GDScript" id=1]
 resource_name = "UISquad"
@@ -228,7 +229,7 @@ margin_top = -42.0
 margin_right = -1.0
 margin_bottom = -2.0
 size_flags_horizontal = 3
-custom_fonts/font = ExtResource( 5 )
+custom_fonts/font = ExtResource( 6 )
 text = "Status message"
 align = 1
 script = SubResource( 2 )
@@ -241,16 +242,15 @@ grow_horizontal = 0
 text = " v1.1.0 \"Armies go to war\""
 
 [node name="BorderScanner" type="Node" parent="Map"]
-script = ExtResource( 6 )
-
-[node name="OwnerMap" type="Node" parent="Map"]
 script = ExtResource( 7 )
 
-[node name="ResourceDistribution" type="Node" parent="Map"]
+[node name="OwnerMap" type="Node" parent="Map"]
 script = ExtResource( 8 )
+
+[node name="ResourceDistribution" type="Node" parent="Map"]
+script = ExtResource( 9 )
 
 [node name="Timer" type="Timer" parent="."]
 autostart = true
 
 [node name="Tween" type="Tween" parent="."]
-

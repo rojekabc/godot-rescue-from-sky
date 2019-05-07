@@ -77,22 +77,19 @@ func setup(type, ownerIdx, timer) -> Structure:
 
 func assign_owner(ownerIdx):
 	self.ownerIdx = ownerIdx
-	match type:
-		Game.STRUCTURE.AIRPORT, Game.STRUCTURE.CITY:
-			$Sprite.material = Game.playerDefinitions[ownerIdx].armyMaterial
-		_:
-			$Sprite.material = Game.playerDefinitions[ownerIdx].structureMaterial
+	$Sprite.material = Game.playerDefinitions[ownerIdx].armyMaterial
 
 func assign_type(strType, timer):
 	var strDef = Game.structureDefinitions[strType]
 	type = strDef.type
-	if type == Game.STRUCTURE.AIRPORT || type == Game.STRUCTURE.CITY:
-		$Acronym.text = ''
-	else:
-		$Acronym.text = strDef.acronym
+	$Acronym.text = ''
 	match type:
 		Game.STRUCTURE.AIRPORT: $Sprite.texture = load('res://Resources/StructureAirport.png')
 		Game.STRUCTURE.CITY: $Sprite.texture = load('res://Resources/StructureCity.png')
+		Game.STRUCTURE.VILLAGE: $Sprite.texture = load('res://Resources/StructureVillage.png')
+		Game.STRUCTURE.BUNKER: $Sprite.texture = load('res://Resources/StructureFort.png')
+		Game.STRUCTURE.FACTORY: $Sprite.texture = load('res://Resources/Factory.png')
+		Game.STRUCTURE.CAPITAL: $Sprite.texture = load('res://Resources/StructureHQ.png')
 	for resource in strDef.consumes:
 		Consumer.add(resource)
 	for resource in strDef.produces:
@@ -104,6 +101,9 @@ func get_type():
 
 func get_name():
 	return Game.playerDefinitions[ownerIdx].name + '.' + Game.structureDefinitions[type].name
+
+func get_info():
+	return Game.playerDefinitions[ownerIdx].name + ' ' + Game.structureDefinitions[type].name + ' [' + Destructable.get_info() + ']'
 	
 func _ready():
 	if get_parent().get_name() == 'Templates':

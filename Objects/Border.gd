@@ -103,6 +103,10 @@ func get_attack_point(ownerMap : OwnerMap):
 func get_name() -> String:
 	return "Border " + str(from) + ":" + str(to)
 
+func get_info() -> String:
+	if is_neutral(): return 'Border [Neutral]'
+	return 'Border [' + Game.playerDefinitions[get_win_player()].name + ']'
+
 func destroy():
 	if LOG: Game.verbose(get_name() + ' destroyed')
 	get_parent().remove_child(self)

@@ -39,3 +39,10 @@ func hit(points : int):
 	if is_destroyed():
 		return
 	set_hp(hp - points)
+
+func get_info():
+	var hpRate : float = get_hp_rate()
+	if hpRate > 0.9: return "Health"
+	if hpRate > 0.5: return "Soft Damaged"
+	if hpRate > 0.1: return "Hard Damaged"
+	return "Destroyed"

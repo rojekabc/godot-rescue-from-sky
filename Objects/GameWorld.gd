@@ -40,34 +40,51 @@ func _input(event):
 		mouse_pressed_at(event.global_position)
 
 func mouse_pressed_at(globalPosition : Vector2) -> void:
-	if CLICKLOG: log_information(globalPosition)
+	var elements : Array = find_elements_at(globalPosition)
+	if CLICKLOG: log_information(elements)
 	
 	if selectTarget:
-		_select_target_action(globalPosition)
+		print_status(elements)
+		_select_target_action(elements)
 	elif $Map/UI/Suqad.visible:
 		return
 	else:
-		var structure : Structure = _find_element_at(globalPosition, Game.STRUCTURE_COLLISION_LAYER)
+		print_status(elements)
+		press_structure(elements)
+
+func press_structure(elements):
+	if elements == null:
+		return
+	for element in elements:
+		if not element.is_in_group('Structure'):
+			continue
+		var structure : Structure = element
 		if structure && Game.playerDefinitions[structure.ownerIdx].type == Player.PlayerType.HUMAN_PLAYER:
 			structure.pressed(self)
 
-func log_information(globalPosition : Vector2) -> void:
-	var elements : Array = find_elements_at(globalPosition)
+func print_status(elements : Array):
+	if elements == null:
+		return null
+	for element in elements:
+		_info(element.get_info())
+
+func log_information(elements : Array) -> void:
+	if elements == null: return
 	for element in elements:
 		if element.has_method('toString'):
 			Game.verbose(element.toString())
 		else:
 			Game.verbose(str(element))
 
-func _select_target_action(globalPosition):
-	var target = _find_element_at(globalPosition)
-	if target == null:
+func _select_target_action(elements : Array):
+	if elements == null:
 		return _fail('Nothing selected')
+	var target : Area2D = elements[0] as Area2D
 	if target.is_in_group('Structure'):
 		if target == selectTarget.source:
 			return _fail('Cannot select itself')
 		if target.ownerIdx == selectTarget.source.ownerIdx:
-			if target.type == Game.Structure.AIRPORT:
+			if target.type == Game.STRUCTURE.AIRPORT:
 				_info('Planned move to ' + target.get_name())
 			else:
 				return _fail('Unknown mission against your structure')

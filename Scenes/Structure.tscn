@@ -4,16 +4,16 @@
 [ext_resource path="res://Resources/ColorShader.shader" type="Shader" id=2]
 [ext_resource path="res://Resources/StructureFont.tres" type="DynamicFont" id=3]
 
-[sub_resource type="ShaderMaterial" id=2]
+[sub_resource type="ShaderMaterial" id=1]
 shader = ExtResource( 2 )
 shader_param/color = Plane( 0, 0, 0, 1 )
 
-[sub_resource type="ImageTexture" id=3]
+[sub_resource type="ImageTexture" id=2]
 flags = 0
 flags = 0
 size = Vector2( 60, 60 )
 
-[sub_resource type="RectangleShape2D" id=4]
+[sub_resource type="RectangleShape2D" id=3]
 extents = Vector2( 30, 30 )
 
 [node name="Structure" type="Area2D" groups=[
@@ -27,15 +27,14 @@ __meta__ = {
 }
 
 [node name="Sprite" type="Sprite" parent="."]
-material = SubResource( 2 )
-texture = SubResource( 3 )
+material = SubResource( 1 )
+texture = SubResource( 2 )
 
 [node name="Collision" type="CollisionShape2D" parent="."]
-shape = SubResource( 4 )
+shape = SubResource( 3 )
 
 [node name="Acronym" type="Label" parent="."]
 margin_right = 29.0
 margin_bottom = 32.0
 custom_fonts/font = ExtResource( 3 )
 text = "C"
-

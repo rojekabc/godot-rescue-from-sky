@@ -30,6 +30,9 @@ func target_destroyed(target):
 
 func get_name():
 	return Game.playerDefinitions[ownerIdx].name + \".army.\" + str(id)
+	
+func get_info():
+	return Game.playerDefinitions[ownerIdx].name + \" army [Attacking]\"
 
 func destroy():
 	if LOG: Game.verbose(get_name() + \": Destroy\")
@@ -83,4 +86,3 @@ texture = ExtResource( 2 )
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 visible = false
 shape = SubResource( 3 )
-
