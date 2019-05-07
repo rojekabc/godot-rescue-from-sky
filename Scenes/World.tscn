@@ -234,13 +234,6 @@ text = "Status message"
 align = 1
 script = SubResource( 2 )
 
-[node name="Label" type="Label" parent="Map/UI"]
-anchor_right = 1.0
-margin_left = 857.0
-margin_bottom = 15.0
-grow_horizontal = 0
-text = " v1.1.0 \"Armies go to war\""
-
 [node name="BorderScanner" type="Node" parent="Map"]
 script = ExtResource( 7 )
 
