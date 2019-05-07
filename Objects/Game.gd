@@ -80,7 +80,7 @@ const GAME_CONFIGURATION = {
 		squadBorderBombardAddPower = 5,
 		squadBorderBombardHitPoints = 5,
 		timertick = 5,
-		BorderScannerTick = 3,
+		borderScannerTick = 3,
 		armyPower = 20,
 		borderMinimumPowerMultiplier = 1,
 		borderMaximumPowerMultiplier = 10,
@@ -89,7 +89,7 @@ const GAME_CONFIGURATION = {
 		borderPowerReduceDefenderMultplier = 1.0
 	}
 
-var CONFIGURATION = TEST_CONFIGURATION
+var CONFIGURATION = GAME_CONFIGURATION
 var borderMinimum
 var borderMaximum
 var borderPowerReduceAttacker

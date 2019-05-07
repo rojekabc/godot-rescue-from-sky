@@ -1,9 +1,11 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://Resources/PanelStyle.tres" type="StyleBox" id=1]
 [ext_resource path="res://Resources/LabelFont.tres" type="DynamicFont" id=2]
 [ext_resource path="res://Resources/RedSide.png" type="Texture" id=3]
 [ext_resource path="res://Resources/BlueSide.png" type="Texture" id=4]
+[ext_resource path="res://Resources/StatusFont.tres" type="DynamicFont" id=5]
+[ext_resource path="res://Objects/StatusLabel.gd" type="Script" id=6]
 
 [sub_resource type="GDScript" id=1]
 script/source = "extends Control
@@ -12,10 +14,15 @@ func _ready():
 	$PanelContainer/VBoxContainer/Start.connect('pressed', self, \"start_pressed\")
 
 func start_pressed():
+	var name : String = $PanelContainer/VBoxContainer/PlayerName/LineEdit.text.lstrip(' ').rstrip(' ')
+	if name.length() == 0:
+		$Status.fail('The name of player is empty')
+		return
+	
 	var humanPlayer = create_human_player()
 	var aiPlayer = create_ai_player()
 	
-	humanPlayer.name = $PanelContainer/VBoxContainer/PlayerName/LineEdit.text
+	humanPlayer.name = name
 	if $PanelContainer/VBoxContainer/Side.pressed:
 		humanPlayer.color = Color(0.2, 0.0, 0.6, 0.5)
 		aiPlayer.color = Color(0.6, 0.0, 0.2, 0.5)
@@ -105,3 +112,17 @@ margin_bottom = 15.0
 grow_horizontal = 0
 custom_fonts/font = ExtResource( 2 )
 text = " v1.1.0 \"Armies go to war\""
+
+[node name="Status" type="Label" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = -1.0
+margin_top = -42.0
+margin_right = -1.0
+margin_bottom = -2.0
+size_flags_horizontal = 3
+custom_fonts/font = ExtResource( 5 )
+text = "Status message"
+align = 1
+script = ExtResource( 6 )

@@ -22,10 +22,6 @@ func start_rule_take_capital(structures : Node2D):
 		if structure.type != Game.STRUCTURE.CAPITAL:
 			continue
 		if Game.playerDefinitions[structure.ownerIdx].type == Player.PlayerType.HUMAN_PLAYER:
-			print('Connect loose')
 			structure.connect('owner_changed', self, 'loose_game')
 		else:
-			print('Connect win')
 			structure.connect('owner_changed', self, 'win_game')
-		pass
-	pass
