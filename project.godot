@@ -54,6 +54,16 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://Objects/ResourceDistribution.gd"
 }, {
+"base": "Node",
+"class": "RuleOfWin",
+"language": "GDScript",
+"path": "res://Objects/RuleOfWin.gd"
+}, {
+"base": "Label",
+"class": "StatusLabel",
+"language": "GDScript",
+"path": "res://Objects/StatusLabel.gd"
+}, {
 "base": "Area2D",
 "class": "Structure",
 "language": "GDScript",
@@ -69,6 +79,8 @@ _global_script_class_icons={
 "OwnerMap": "",
 "Player": "",
 "ResourceDistribution": "",
+"RuleOfWin": "",
+"StatusLabel": "",
 "Structure": ""
 }
 

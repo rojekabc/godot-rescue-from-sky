@@ -10,7 +10,7 @@ func _ready():
 	# Enable randomization
 	randomize()
 	# Hide templates
-	Tool.children_action($Map/UI, 'hide')
+	Tool.children_action($UI, 'hide')
 	# Start timestamp calculation from beginig of play
 	$Timer.wait_time = Game.CONFIGURATION.timertick
 	$Timer.connect('timeout', self, "_timeout")
@@ -24,16 +24,18 @@ func _ready():
 	$Tween.connect('tween_completed', self, '_tween_completed')
 	# Enable mouse press processing
 	set_process_input( true )
+	
+	$Map/RuleOfWin.start_rule_take_capital($Map/Structures)
 	pass
 
 func _status(msg):
-	$Map/UI/Status.status(msg)
+	$UI/Status.status(msg)
 	
 func _info(msg):
-	$Map/UI/Status.info(msg)
+	$UI/Status.info(msg)
 	
 func _fail(msg):
-	$Map/UI/Status.fail(msg)
+	$UI/Status.fail(msg)
 	
 func _input(event):
 	if event is InputEventMouseButton and event.is_pressed() and event.button_index == BUTTON_LEFT:
@@ -46,15 +48,13 @@ func mouse_pressed_at(globalPosition : Vector2) -> void:
 	if selectTarget:
 		print_status(elements)
 		_select_target_action(elements)
-	elif $Map/UI/Suqad.visible:
+	elif $UI/Suqad.visible:
 		return
 	else:
 		print_status(elements)
 		press_structure(elements)
 
 func press_structure(elements):
-	if elements == null:
-		return
 	for element in elements:
 		if not element.is_in_group('Structure'):
 			continue
@@ -63,13 +63,10 @@ func press_structure(elements):
 			structure.pressed(self)
 
 func print_status(elements : Array):
-	if elements == null:
-		return null
 	for element in elements:
 		_info(element.get_info())
 
 func log_information(elements : Array) -> void:
-	if elements == null: return
 	for element in elements:
 		if element.has_method('toString'):
 			Game.verbose(element.toString())
@@ -77,7 +74,7 @@ func log_information(elements : Array) -> void:
 			Game.verbose(str(element))
 
 func _select_target_action(elements : Array):
-	if elements == null:
+	if elements.empty():
 		return _fail('Nothing selected')
 	var target : Area2D = elements[0] as Area2D
 	if target.is_in_group('Structure'):
@@ -148,7 +145,8 @@ func _timeout():
 func _map_create():
 	ownerMap.place_borders($Map/Borders)
 	
-	for ownerIdx in range(2):
+	for ownerIdx in range(Game.playerDefinitions.size()):
+		var player : Player = Game.playerDefinitions[ownerIdx]
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
 			if structure.type == Game.STRUCTURE.AIRPORT:
@@ -178,7 +176,7 @@ func select_target(airport, planes):
 	pass
 
 func ui_squad_panel(airport):
-	var panel = $Map/UI/Suqad
+	var panel = $UI/Suqad
 	panel.set_airport(airport)
 	_fix_panel_position(panel, airport.position)
 	pass

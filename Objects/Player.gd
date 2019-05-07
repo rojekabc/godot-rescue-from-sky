@@ -1,9 +1,6 @@
 class_name Player
 
-enum PlayerType {
-	HUMAN_PLAYER,
-	AI_PLAYER
-}
+enum PlayerType {HUMAN_PLAYER, AI_PLAYER}
 
 var type : int
 # var playerIdx : int

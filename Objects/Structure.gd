@@ -18,6 +18,7 @@ var LOG = Game.CONFIGURATION.loggers.has('Structure')
 
 signal object_destroyed(object)
 signal update_planes(object, planesData)
+signal owner_changed
 
 func destroy():
 	emit_signal('object_destroyed', self)
@@ -128,17 +129,16 @@ func update_owner(ownerMap : OwnerMap):
 		0:
 			# Change owner - first assign owner, after set HP structure will be registered as a consumer
 			assign_owner((ownerIdx + 1) % 2)
-			Destructable.set_hp(Destructable.HP_MAX)
+			Destructable.update_hp(+20) # quick rebuild by army
 			# TODO start repair
-		1, 2:
-			# Stop production - destroy
-			Destructable.set_hp(Destructable.HP_DESTROYED)
-		3:
-			# Half of production - half of health
-			Destructable.set_hp(Destructable.HP_MAX/2)
+			emit_signal('owner_changed')
+		1, 2, 3:
+			# Do some destruction - moving front
+			if Destructable.get_hp_rate() > 0.1:
+				Destructable.update_hp(-30)
 		4:
 			# TODO start repair - now fully repair
-			Destructable.set_hp(Destructable.HP_MAX)
+			Destructable.update_hp(+20) # quick rebuild by army
 	pass
 
 func _call_type_function(function, args=null):

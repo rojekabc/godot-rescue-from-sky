@@ -131,7 +131,7 @@ func getTween() -> Tween:
 func changeScene(scene : int) -> void:
 	match scene:
 		SCENE.START:
-			get_tree().change_scene('res://Scenes/GUIStart,tscn')
+			get_tree().change_scene('res://Scenes/GUIStart.tscn')
 		SCENE.GAME:
 			get_tree().change_scene('res://Scenes/World.tscn')
 
