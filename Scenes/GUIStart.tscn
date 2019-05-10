@@ -111,7 +111,7 @@ margin_left = 857.0
 margin_bottom = 15.0
 grow_horizontal = 0
 custom_fonts/font = ExtResource( 2 )
-text = " v1.1.0 \"Armies go to war\""
+text = " v1.2.0 \"AI becomes a true\""
 
 [node name="Status" type="Label" parent="."]
 anchor_top = 1.0
