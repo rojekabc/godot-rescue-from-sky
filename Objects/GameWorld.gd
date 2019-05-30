@@ -150,8 +150,8 @@ func _map_create():
 		for strType in Game.STRUCTURE.values():
 			var structure = _structure_create(ownerIdx, strType)
 			if structure.type == Game.STRUCTURE.AIRPORT:
-				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.PLANE.FIGHTER))
-				structure.PlaneHolder.add_plane(_airplane_create(ownerIdx, Game.PLANE.BOMBER))
+				for airplaneType in [Game.PLANE.FIGHTER, Game.PLANE.BOMBER]:
+					$Map/PlaneManager.create_plane(ownerIdx, airplaneType, structure)
 			while not find_elements_at_points(structure.get_corners(), Game.STRUCTURE_COLLISION_LAYER).empty():
 				Game.verbose('Fix structure collision')
 				structure.random_position(ownerIdx, $Map/OwnerMap)
@@ -191,8 +191,9 @@ func squad_start(source, target, planes):
 	squad.Moveable.assign(source, target)
 	squad.assign_target(target)
 	squad.get_node('Sprite').material = Game.playerDefinitions[squad.ownerIdx].armyMaterial
-	source.PlaneHolder.rem_planes(planes)
-	squad.PlaneHolder.add_planes(planes)
+	Game.getPlaneManager().fly(planes, squad)
+	# source.PlaneHolder.rem_planes(planes)
+	# squad.PlaneHolder.add_planes(planes)
 	$Map/Squads.add_child(squad)
 	_calculate_move_tween(squad)
 
@@ -262,10 +263,6 @@ func _structure_create(ownerIdx, type):
 	structure.visible = true
 	structure.random_position(ownerIdx, $Map/OwnerMap)
 	return structure
-
-func _airplane_create(ownerIdx, type):
-	var airplane = Game.AirPlane.new(ownerIdx, type)
-	return airplane
 
 func army_find_target_from_array(source, array, excluded=[]):
 	var target = null

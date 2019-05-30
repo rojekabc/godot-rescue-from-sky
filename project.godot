@@ -45,6 +45,16 @@ _global_script_classes=[ {
 "path": "res://Objects/OwnerMap.gd"
 }, {
 "base": "Reference",
+"class": "Pilot",
+"language": "GDScript",
+"path": "res://Objects/Pilot.gd"
+}, {
+"base": "Node",
+"class": "PlaneManager",
+"language": "GDScript",
+"path": "res://Objects/PlaneManager.gd"
+}, {
+"base": "Reference",
 "class": "Player",
 "language": "GDScript",
 "path": "res://Objects/Player.gd"
@@ -58,6 +68,11 @@ _global_script_classes=[ {
 "class": "RuleOfWin",
 "language": "GDScript",
 "path": "res://Objects/RuleOfWin.gd"
+}, {
+"base": "Area2D",
+"class": "Squad",
+"language": "GDScript",
+"path": "res://Objects/Squad.gd"
 }, {
 "base": "Label",
 "class": "StatusLabel",
@@ -77,9 +92,12 @@ _global_script_class_icons={
 "Destructable": "",
 "GameWorld": "",
 "OwnerMap": "",
+"Pilot": "",
+"PlaneManager": "",
 "Player": "",
 "ResourceDistribution": "",
 "RuleOfWin": "",
+"Squad": "",
 "StatusLabel": "",
 "Structure": ""
 }

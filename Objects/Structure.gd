@@ -9,7 +9,6 @@ var type
 var ownerIdx
 var mapPosition : Vector2
 
-var PlaneHolder
 var Destructable : Destructable
 var Consumer
 var Producer
@@ -17,7 +16,6 @@ var Producer
 var LOG = Game.CONFIGURATION.loggers.has('Structure')
 
 signal object_destroyed(object)
-signal update_planes(object, planesData)
 signal owner_changed
 
 func destroy():
@@ -43,9 +41,6 @@ func _init():
 
 func target_destroyed(target):
 	Game.verbose(get_name() + ': Target destroyed')
-
-func _Airport_create_data():
-	PlaneHolder = Game.PlaneHolder.new(self)
 
 # Register consumer, which will receive produced resource
 func register_consumer(resource, consumer):
@@ -173,33 +168,23 @@ func _Bunker_timeout():
 func _Airport_timeout():
 	if not Consumer.has(Game.RESOURCE.AIRPLANE):
 		return
-	var assignPlaneType = []
-	var planeCount = _Airport_count_planes()
-	
-	if planeCount[Game.PLANE.FIGHTER] < Game.CONFIGURATION.airportFighterLimit:
-		assignPlaneType.append(Game.PLANE.FIGHTER)
-	if planeCount[Game.PLANE.BOMBER] < Game.CONFIGURATION.airportBomberLimit:
-		assignPlaneType.append(Game.PLANE.BOMBER)
-		
-	if assignPlaneType.empty():
+	var count : Dictionary = Game.getPlaneManager().count_assigned_planes(self)
+	var sum : int = 0
+	var limitSum : int = 0
+	for type in Game.PLANE.values():
+		sum += count[type]
+		limitSum += Game.CONFIGURATION.airportLimit[type]
+	if sum >= limitSum:
 		return
-	
-	var plane = Game.getWorld()._airplane_create(ownerIdx, assignPlaneType[randi() % assignPlaneType.size()])
-	PlaneHolder.add_plane(plane)
-	Consumer.consume(Game.RESOURCE.AIRPLANE)
-	pass
-
-func _Airport_count_planes():
-	var fighterCount = 0
-	var bomberCount = 0
-	for plane in PlaneHolder.planes:
-		if plane.type == Game.PLANE.FIGHTER: fighterCount += 1
-		if plane.type == Game.PLANE.BOMBER: bomberCount += 1
-	return {
-			Game.PLANE.FIGHTER : fighterCount,
-			Game.PLANE.BOMBER : bomberCount
-		}
+	var rand : float = randf()
+	var randLimit : float = 0.0
+	for type in Game.PLANE.values():
+		var planeLimit = Game.CONFIGURATION.airportLimit[type]
+		randLimit += float(planeLimit-count[type])/float(limitSum-sum)
+		if rand <= randLimit:
+			Game.getPlaneManager().create_plane(ownerIdx, type, self)
+			Consumer.consume(Game.RESOURCE.AIRPLANE)
+			return
 
 func _Airport_pressed(world):
 	world.ui_squad_panel(self)
-

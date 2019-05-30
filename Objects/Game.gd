@@ -3,6 +3,7 @@ extends Node
 enum STRUCTURE {CITY, VILLAGE, BUNKER, AIRPORT, FACTORY, CAPITAL}
 enum RESOURCE {MANPOWER, FOOD, ARMY, AIRPLANE}
 enum PLANE{FIGHTER, BOMBER}
+enum PlaneState {FLY, ONGROUND}
 
 var timetick = 0
 var armyId = 0 setget ,get_army_id
@@ -27,14 +28,10 @@ const BORDER_COLLISION_MASK = STRUCTURE_COLLISION_LAYER
 const ALL_COLLISION_MASK = STRUCTURE_COLLISION_LAYER | TRANSPORT_COLLISION_LAYER | BORDER_COLLISION_LAYER | ARMY_COLLISION_LAYER | SQUAD_COLLISION_LAYER
 
 enum SCENE {START, GAME}
-# Objects
-#warning-ignore:unused_class_variable
-var AirPlane = preload('res://Objects/AirPlane.gd')
 
 # interfaces
 var Moveable = preload('res://Interfaces/Moveable.gd')
 #warning-ignore:unused_class_variable
-var PlaneHolder = preload('res://Interfaces/PlaneHolder.gd')
 var Destructable = preload('res://Interfaces/Destructable.gd')
 #warning-ignore:unused_class_variable
 var Consumer = preload('res://Interfaces/Consumer.gd')
@@ -47,14 +44,15 @@ const TEST_CONFIGURATION = {
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
-		airportFighterLimit = 100,
-		airportBomberLimit = 100,
+		airportLimit = [3, 3],
 		squadStructureBombardHitPoints = 20,
 		squadTransportBombardDestoryChance = 100,
 		squadFighterHitPoints = 60,
 		squadBomberHitPoints = 5,
 		squadBorderBombardAddPower = 5,
 		squadBorderBombardHitPoints = 5,
+		squadBomberLimit = 3,
+		squadFighterLimit = 3,
 		timertick = 1,
 		borderScannerTick = 3,
 		armyPower = 20,
@@ -71,15 +69,18 @@ const GAME_CONFIGURATION = {
 		transportSpeed = 20, # number of units (unit is a distance between structures) per second
 		fighterSquadSpeed = 90,
 		bomberSquadSpeed = 60,
-		airportFighterLimit = 100,
-		airportBomberLimit = 100,
+		airportLimit = [6, 6],
+		airportFighterLimit = 6,
+		airportBomberLimit = 6,
 		squadStructureBombardHitPoints = 20,
 		squadTransportBombardDestoryChance = 30,
 		squadFighterHitPoints = 30,
 		squadBomberHitPoints = 5,
 		squadBorderBombardAddPower = 5,
 		squadBorderBombardHitPoints = 5,
-		timertick = 5,
+		squadBomberLimit = 3,
+		squadFighterLimit = 3,
+		timertick = 3,
 		borderScannerTick = 3,
 		armyPower = 20,
 		borderMinimumPowerMultiplier = 1,
@@ -89,7 +90,7 @@ const GAME_CONFIGURATION = {
 		borderPowerReduceDefenderMultplier = 1.0
 	}
 
-var CONFIGURATION = GAME_CONFIGURATION
+var CONFIGURATION = TEST_CONFIGURATION
 var borderMinimum
 var borderMaximum
 var borderPowerReduceAttacker
@@ -122,11 +123,14 @@ func verbose(msg):
 func getWorld() -> GameWorld:
 	return get_tree().get_root().get_node('World') as GameWorld
 
-func getTimer() -> Timer:
+func getTimer():
 	return get_tree().get_root().get_node('World/Timer') as Timer
 
-func getTween() -> Tween:
+func getTween():
 	return get_tree().get_root().get_node('World/Tween') as Tween
+
+func getPlaneManager() -> PlaneManager:
+	return get_tree().get_root().get_node('World/Map/PlaneManager') as PlaneManager
 
 func changeScene(scene : int) -> void:
 	match scene:
@@ -212,9 +216,9 @@ func _ready():
 	Border = load('res://Scenes/Border.tscn').instance()
 
 	# Calculate value of static variables
-	borderMinimum = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderMinimumPowerMultiplier
-	borderMaximum = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderMaximumPowerMultiplier
-	borderPowerReduceAttacker = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderPowerReduceAttackerMultplier
-	borderPowerReduceDefender = Game.CONFIGURATION.armyPower * Game.CONFIGURATION.borderPowerReduceDefenderMultplier
+	borderMinimum = CONFIGURATION.armyPower * CONFIGURATION.borderMinimumPowerMultiplier
+	borderMaximum = CONFIGURATION.armyPower * CONFIGURATION.borderMaximumPowerMultiplier
+	borderPowerReduceAttacker = CONFIGURATION.armyPower * CONFIGURATION.borderPowerReduceAttackerMultplier
+	borderPowerReduceDefender = CONFIGURATION.armyPower * CONFIGURATION.borderPowerReduceDefenderMultplier
 
 	pass
