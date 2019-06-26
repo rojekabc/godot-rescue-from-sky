@@ -264,21 +264,13 @@ func _structure_create(ownerIdx, type):
 	structure.random_position(ownerIdx, $Map/OwnerMap)
 	return structure
 
-func army_find_target_from_array(source, array, excluded=[]):
-	var target = null
-	var distance = 20000
-	for child in array:
-		if excluded.has(child):
-			continue
-		var targetDistance = (child.position - source.position).length()
-		if targetDistance < distance:
-			target = child
-			distance = targetDistance
-	return target
-
 func army_find_target(source, excluded = []):
-	var closest_board = army_find_target_from_array(source, $Map/Borders.get_children(), excluded)
-	return closest_board
+	return ObjectStream\
+	.new($Map/Borders.get_children())\
+	.filter(ExcludeObjectFilter.new(excluded))\
+	.filter(NearestObjectFilter.new(source.position))\
+	.first()
+
 
 func army_create(source, target):
 	var army : Area2D = Game.create(Game.Army)
@@ -298,4 +290,3 @@ func army_start(source, target):
 	army.assign_target(target)
 	$Map/Armies.add_child(army)
 	_calculate_full_move_tween(army)
-	

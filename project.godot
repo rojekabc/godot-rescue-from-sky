@@ -34,10 +34,30 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://Interfaces/Destructable.gd"
 }, {
+"base": "ObjectFilter",
+"class": "ExcludeObjectFilter",
+"language": "GDScript",
+"path": "res://Tools/stream/ExcludeObjectFilter.gd"
+}, {
 "base": "Node2D",
 "class": "GameWorld",
 "language": "GDScript",
 "path": "res://Objects/GameWorld.gd"
+}, {
+"base": "ObjectFilter",
+"class": "NearestObjectFilter",
+"language": "GDScript",
+"path": "res://Tools/stream/NearestObjectFilter.gd"
+}, {
+"base": "Reference",
+"class": "ObjectFilter",
+"language": "GDScript",
+"path": "res://Tools/stream/ObjectFilter.gd"
+}, {
+"base": "Reference",
+"class": "ObjectStream",
+"language": "GDScript",
+"path": "res://Tools/stream/ObjectStream.gd"
 }, {
 "base": "Node",
 "class": "OwnerMap",
@@ -83,6 +103,11 @@ _global_script_classes=[ {
 "class": "Structure",
 "language": "GDScript",
 "path": "res://Objects/Structure.gd"
+}, {
+"base": "ObjectFilter",
+"class": "TypeObjectFilter",
+"language": "GDScript",
+"path": "res://Tools/stream/TypeObjectFilter.gd"
 } ]
 _global_script_class_icons={
 "AirPlane": "",
@@ -90,7 +115,11 @@ _global_script_class_icons={
 "BorderScanner": "",
 "Consumer": "",
 "Destructable": "",
+"ExcludeObjectFilter": "",
 "GameWorld": "",
+"NearestObjectFilter": "",
+"ObjectFilter": "",
+"ObjectStream": "",
 "OwnerMap": "",
 "Pilot": "",
 "PlaneManager": "",
@@ -99,7 +128,8 @@ _global_script_class_icons={
 "RuleOfWin": "",
 "Squad": "",
 "StatusLabel": "",
-"Structure": ""
+"Structure": "",
+"TypeObjectFilter": ""
 }
 
 [application]

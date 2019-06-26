@@ -9,6 +9,7 @@ resource_name = "Transport"
 script/source = "extends Area2D
 
 var LOG = Game.CONFIGURATION.loggers.has('Transport')
+var objectType : int = Game.OBJECT_TRANSPORT
 
 var resource
 var ownerIdx

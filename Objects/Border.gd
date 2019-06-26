@@ -2,6 +2,7 @@ extends Area2D
 class_name Border
 
 var LOG = Game.CONFIGURATION.loggers.has('Border')
+var objectType : int = Game.OBJECT_BORDER
 
 signal object_destroyed(object)
 

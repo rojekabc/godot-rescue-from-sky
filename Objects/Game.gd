@@ -8,6 +8,14 @@ enum PlaneState {FLY, ONGROUND}
 var timetick = 0
 var armyId = 0 setget ,get_army_id
 
+# Object Types
+const OBJECT_STRUCTURE : int = 1
+const OBJECT_BORDER : int = 2
+const OBJECT_TRANSPORT : int = 4
+const OBJECT_ARMY : int = 8
+const OBJECT_SQUAD : int = 16
+const OBJECT_ALL : int =  OBJECT_STRUCTURE | OBJECT_BORDER | OBJECT_TRANSPORT | OBJECT_ARMY | OBJECT_SQUAD
+
 # Materials
 var neutralMaterial
 

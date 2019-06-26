@@ -8,6 +8,7 @@ resource_name = "Army"
 script/source = "extends Area2D
 
 var LOG = Game.CONFIGURATION.loggers.has('Army')
+var objectType : int = Game.OBJECT_ARMY
 
 var Moveable
 var Destructable : Destructable

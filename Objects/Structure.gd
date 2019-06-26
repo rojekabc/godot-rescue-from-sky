@@ -3,6 +3,7 @@ class_name Structure
 
 const HALF_SIZE = 30
 const FULL_SIZE = 60
+var objectType : int = Game.OBJECT_STRUCTURE
 
 # type of Game.STRUCTURE enum
 var type

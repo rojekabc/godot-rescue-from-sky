@@ -2,6 +2,7 @@ class_name Squad
 extends Area2D
 
 var LOG = Game.CONFIGURATION.loggers.has('Squad')
+var objectType : int = Game.OBJECT_SQUAD
 
 var ownerIdx
 var type
