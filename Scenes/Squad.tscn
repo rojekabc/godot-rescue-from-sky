@@ -4,11 +4,11 @@
 [ext_resource path="res://Resources/ArmyMaterial.shader" type="Shader" id=2]
 [ext_resource path="res://Resources/Fighter.png" type="Texture" id=3]
 
-[sub_resource type="ShaderMaterial" id=2]
+[sub_resource type="ShaderMaterial" id=1]
 shader = ExtResource( 2 )
 shader_param/color = Plane( 1, 0, 0, 1 )
 
-[sub_resource type="RectangleShape2D" id=3]
+[sub_resource type="RectangleShape2D" id=2]
 extents = Vector2( 15, 15 )
 
 [node name="Squad" type="Area2D" groups=[
@@ -20,9 +20,9 @@ __meta__ = {
 }
 
 [node name="Sprite" type="Sprite" parent="."]
-material = SubResource( 2 )
+material = SubResource( 1 )
 texture = ExtResource( 3 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 visible = false
-shape = SubResource( 3 )
+shape = SubResource( 2 )

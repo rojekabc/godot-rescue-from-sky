@@ -22,8 +22,10 @@ script/source = "extends PanelContainer
 var airport = null
 
 func _ready():
-	$Container/Columns/Actions/Target.connect('pressed', self, '_target_pressed')
+	$Container/Buttons/Target.connect('pressed', self, '_target_pressed')
 	$Container/Title.connect('gui_input', self, '_title_gui_input')
+	$Container/PlaneButtons/Fighters.connect('pressed', self, '_fighters_pressed')
+	$Container/PlaneButtons/Bombers.connect('pressed', self, '_bombers_pressed')
 	Game.getPlaneManager().connect('update_planes', self, '_sig_update_planes')
 	pass
 
@@ -32,6 +34,14 @@ func _title_gui_input(event):
 		$Container/Title.accept_event()
 		clear_planes()
 		_detach_airport_view()
+
+func _fighters_pressed():
+	for checkbox in $Container/Columns/Fighters/Container.get_children():
+		checkbox.pressed = !checkbox.pressed
+	
+func _bombers_pressed():
+	for checkbox in $Container/Columns/Bombers/Container.get_children():
+		checkbox.pressed = !checkbox.pressed
 
 func _target_pressed():
 	var planes = _list_selected_planes()
@@ -59,7 +69,10 @@ func _sig_update_planes(object, planes):
 
 func _list_selected_planes():
 	var result = []
-	for checkbox in $Container/Columns/Planes/Container.get_children():
+	for checkbox in $Container/Columns/Fighters/Container.get_children():
+		if checkbox.pressed:
+			result.append(checkbox.get_meta('plane'))
+	for checkbox in $Container/Columns/Bombers/Container.get_children():
 		if checkbox.pressed:
 			result.append(checkbox.get_meta('plane'))
 	return result
@@ -68,29 +81,41 @@ func update_planes():
 	if airport == null:
 		return
 	var planes = Game.getPlaneManager().list_planes(airport)
-	for child in $Container/Columns/Planes/Container.get_children():
+	for child in $Container/Columns/Fighters/Container.get_children():
 		var uiplane = child.get_meta('plane')
 		if planes.has(uiplane):
 			planes.erase(uiplane)
 		else:
-			$Container/Columns/Planes/Container.remove_child(child)
+			$Container/Columns/Fighters/Container.remove_child(child)
+			child.queue_free()
+	for child in $Container/Columns/Bombers/Container.get_children():
+		var uiplane = child.get_meta('plane')
+		if planes.has(uiplane):
+			planes.erase(uiplane)
+		else:
+			$Container/Columns/Bombers/Container.remove_child(child)
 			child.queue_free()
 	for plane in planes:
 		append_plane(plane)
 
 func clear_planes():
-	for child in $Container/Columns/Planes/Container.get_children():
-		$Container/Columns/Planes/Container.remove_child(child)
+	clear_planes_in_container($Container/Columns/Fighters/Container)
+	clear_planes_in_container($Container/Columns/Bombers/Container)
+
+func clear_planes_in_container(container):
+	for child in container.get_children():
+		container.remove_child(child)
 		child.queue_free()
 
 func append_plane(plane):
 	var checkbox = CheckBox.new()
+	checkbox.set_meta('plane', plane)
 	if plane.type == Game.PLANE.FIGHTER:
 		checkbox.text = 'Fighter'
+		$Container/Columns/Fighters/Container.add_child(checkbox)
 	else:
 		checkbox.text = 'Bomber'
-	checkbox.set_meta('plane', plane)
-	$Container/Columns/Planes/Container.add_child(checkbox)
+		$Container/Columns/Bombers/Container.add_child(checkbox)
 
 func append_planes(planesData : Array):
 	for plane in planesData:
@@ -117,6 +142,7 @@ font_data = ExtResource( 13 )
 script = ExtResource( 1 )
 
 [node name="Map" type="Node2D" parent="."]
+editor/display_folded = true
 
 [node name="Structures" type="Node2D" parent="Map"]
 
@@ -144,12 +170,12 @@ script = ExtResource( 5 )
 script = ExtResource( 6 )
 
 [node name="UI" type="Control" parent="."]
-margin_right = 1024.0
-margin_bottom = 600.0
+margin_left = -4.51251
+margin_top = 1.80501
+margin_right = 1019.49
+margin_bottom = 601.805
 
 [node name="Suqad" type="PanelContainer" parent="UI"]
-editor/display_folded = true
-visible = false
 margin_left = 377.0
 margin_top = 180.0
 margin_right = 643.0
@@ -163,11 +189,11 @@ __meta__ = {
 [node name="Container" type="VBoxContainer" parent="UI/Suqad"]
 margin_left = 10.0
 margin_top = 10.0
-margin_right = 256.0
-margin_bottom = 259.0
+margin_right = 318.0
+margin_bottom = 333.0
 
 [node name="Title" type="Label" parent="UI/Suqad/Container"]
-margin_right = 246.0
+margin_right = 308.0
 margin_bottom = 45.0
 mouse_filter = 1
 custom_styles/normal = ExtResource( 8 )
@@ -175,37 +201,78 @@ custom_fonts/font = ExtResource( 9 )
 text = "Squad"
 align = 1
 
-[node name="Columns" type="HBoxContainer" parent="UI/Suqad/Container"]
+[node name="PlaneButtons" type="HBoxContainer" parent="UI/Suqad/Container"]
 margin_top = 49.0
-margin_right = 246.0
-margin_bottom = 249.0
+margin_right = 308.0
+margin_bottom = 82.0
 
-[node name="Planes" type="ScrollContainer" parent="UI/Suqad/Container/Columns"]
-margin_right = 171.0
+[node name="Fighters" type="Button" parent="UI/Suqad/Container/PlaneButtons"]
+margin_right = 152.0
+margin_bottom = 33.0
+size_flags_horizontal = 3
+custom_fonts/font = ExtResource( 10 )
+text = "Fighters"
+
+[node name="Bombers" type="Button" parent="UI/Suqad/Container/PlaneButtons"]
+margin_left = 156.0
+margin_right = 308.0
+margin_bottom = 33.0
+size_flags_horizontal = 3
+custom_fonts/font = ExtResource( 10 )
+text = "Bombers"
+
+[node name="Columns" type="HBoxContainer" parent="UI/Suqad/Container"]
+margin_top = 86.0
+margin_right = 308.0
+margin_bottom = 286.0
+
+[node name="Fighters" type="ScrollContainer" parent="UI/Suqad/Container/Columns"]
+editor/display_folded = true
+margin_right = 150.0
 margin_bottom = 200.0
 rect_min_size = Vector2( 150, 200 )
 size_flags_horizontal = 3
 
-[node name="Container" type="VBoxContainer" parent="UI/Suqad/Container/Columns/Planes"]
-margin_right = 171.0
+[node name="Container" type="VBoxContainer" parent="UI/Suqad/Container/Columns/Fighters"]
+margin_right = 150.0
+size_flags_horizontal = 3
+
+[node name="Bombers" type="ScrollContainer" parent="UI/Suqad/Container/Columns"]
+editor/display_folded = true
+margin_left = 154.0
+margin_right = 304.0
+margin_bottom = 200.0
+rect_min_size = Vector2( 150, 200 )
+size_flags_horizontal = 3
+
+[node name="Container" type="VBoxContainer" parent="UI/Suqad/Container/Columns/Bombers"]
+margin_right = 150.0
 size_flags_horizontal = 3
 
 [node name="Actions" type="VBoxContainer" parent="UI/Suqad/Container/Columns"]
-margin_left = 175.0
-margin_right = 246.0
+margin_left = 308.0
+margin_right = 308.0
 margin_bottom = 200.0
 
-[node name="Target" type="Button" parent="UI/Suqad/Container/Columns/Actions"]
-margin_right = 71.0
+[node name="Buttons" type="HBoxContainer" parent="UI/Suqad/Container"]
+editor/display_folded = true
+margin_top = 290.0
+margin_right = 308.0
+margin_bottom = 323.0
+
+[node name="Target" type="Button" parent="UI/Suqad/Container/Buttons"]
+margin_right = 308.0
 margin_bottom = 33.0
+size_flags_horizontal = 3
 custom_fonts/font = ExtResource( 10 )
 text = "Target"
 
-[node name="Patrol" type="Button" parent="UI/Suqad/Container/Columns/Actions"]
+[node name="Patrol" type="Button" parent="UI/Suqad/Container/Buttons"]
 visible = false
-margin_top = 37.0
-margin_right = 71.0
-margin_bottom = 70.0
+margin_left = 125.0
+margin_right = 246.0
+margin_bottom = 33.0
+size_flags_horizontal = 3
 custom_fonts/font = ExtResource( 10 )
 text = "Patrol"
 
