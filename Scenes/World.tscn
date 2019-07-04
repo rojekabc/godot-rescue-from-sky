@@ -175,7 +175,6 @@ margin_right = 1019.49
 margin_bottom = 601.805
 
 [node name="Suqad" type="PanelContainer" parent="UI"]
-editor/display_folded = true
 visible = false
 margin_left = 377.0
 margin_top = 180.0
@@ -199,7 +198,7 @@ margin_bottom = 45.0
 mouse_filter = 1
 custom_styles/normal = ExtResource( 8 )
 custom_fonts/font = ExtResource( 9 )
-text = "Squad"
+text = "Airport"
 align = 1
 
 [node name="PlaneButtons" type="HBoxContainer" parent="UI/Suqad/Container"]
