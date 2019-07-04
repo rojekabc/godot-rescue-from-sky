@@ -31,9 +31,6 @@ func fly(planes : Array, squad : Squad):
 	emit_signal('update_planes', airport, list_planes(airport))
 	# emit_signal('update_planes', squad, list_assigned_to_squad(squad))
 
-func etoi(e : int) -> int:
-	return e
-
 func count_assigned_planes(airport : Structure) -> Dictionary:
 	var result = {}
 	for type in Game.PLANE.values():

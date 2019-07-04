@@ -142,7 +142,16 @@ func get_type():
 	return type
 
 func get_info():
-	return Game.playerDefinitions[ownerIdx].name + ' squad'
+	var planes : Array = list_planes()
+	var fighters : int = 0
+	var bombers : int = 0
+	
+	for plane in planes:
+		if plane.type == Game.PLANE.BOMBER:
+			bombers += 1
+		elif plane.type == Game.PLANE.FIGHTER:
+			fighters += 1
+	return Game.playerDefinitions[ownerIdx].name + ' squad (' + str(fighters) + ':' + str(bombers) + ')'
 
 func _body_entered(body):
 	if Moveable.target == body:
